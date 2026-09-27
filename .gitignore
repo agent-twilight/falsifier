@@ -1,0 +1,42 @@
+# ---------------------------------------------------------------
+# Secrets. The single most important block in this file.
+# .env holds your API keys. A key pushed to public GitHub is found
+# by scraper bots within minutes and used until your credits run out.
+# ---------------------------------------------------------------
+.env
+.env.*
+# The "!" means "except this one". .env.example is the blank
+# template with no real values, and it is meant to be committed.
+!.env.example
+
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+# Compiled bytecode, regenerated automatically on every run.
+__pycache__/
+*.py[cod]
+# The virtual environment: hundreds of MB of installed libraries,
+# rebuilt by anyone from requirements.txt in a single command.
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------
+# Your personal data. Never committed, not even to a private repo.
+# The claim register is the densest description of you that exists.
+# ---------------------------------------------------------------
+data/
+logs/
+*.db
+*.sqlite3
+
+# ---------------------------------------------------------------
+# OS and editor junk
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

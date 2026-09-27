@@ -1,0 +1,23 @@
+# Install with:
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+#
+# Versions are unpinned for now. Once the pipeline works, pin them with
+#   .venv\Scripts\python.exe -m pip freeze > requirements.txt
+# so a stranger cloning the repo gets exactly the versions that worked.
+
+# Web interface
+fastapi
+uvicorn[standard]
+jinja2
+
+# Nebius Token Factory is OpenAI-compatible, so this is the Nebius client too
+openai
+
+# Retrieval
+tavily-python
+
+# Reads .env into the environment
+python-dotenv
+
+# Tests
+pytest
