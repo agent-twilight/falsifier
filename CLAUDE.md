@@ -46,6 +46,12 @@ The app supports **two modes from the start**: the user's own instance, and a
 clean public demo session carrying no personal data. Designed in on day one,
 not retrofitted in late October.
 
+**Always-on is a hard track requirement and stays in scope** — daily loop,
+deployed, running unattended, silent on quiet days. What was scaled back is
+only the *claim of duration* in the README: write what the logs actually show.
+Deploy the loop as early as possible. Every earlier day is a day of real logs,
+and logs that do not exist cannot be shown to a judge.
+
 ## Stack
 
 - **Python 3.13**, FastAPI, SQLite
@@ -108,14 +114,30 @@ input tokens, output tokens, latency and computed cost to SQLite. Nothing
 calls the client directly. The spend cap lives in that wrapper.
 
 **Cost safety, enforced in code before the first full pipeline run:** a hard
-per-run call ceiling and a daily spend cap. Total credits are **$50** against
-~490 calls per claim, so a single runaway loop can end the project. Real
-per-token prices are unverified — confirm them from the Nebius Token Factory
-pricing page and compute actual cost per claim before scaling up.
+per-run call ceiling and a daily spend cap. One runaway retry loop can end the
+project, so the ceiling goes in before the first full run, not after.
 
-**Tavily search credits are the binding constraint, not Nebius credits** —
-roughly 40 searches per claim. Cache aggressively; never re-search a query
-already answered.
+**Balances as of 16 Oct 2026 — do not hard-plan around either number:**
+
+- **Token Factory: $29.** Builders Program credits are pending and may roughly
+  double this to ~$54. Treat $29 as the number that has to work.
+- **Tavily: 1000 credits.** More requested, not granted. At ~40 searches per
+  claim that is ~25 full runs on basic search, ~12 on advanced. Confirm which
+  rate applies.
+
+Real per-token prices are still unverified. Confirm them from the Token
+Factory pricing page and compute actual cost per claim on the first real run,
+from logged token counts rather than estimates.
+
+**Tavily credits are the binding constraint, not Nebius credits.** Two rules
+follow, both load-bearing:
+
+- **Record once, replay free.** The first real Tavily response for a query is
+  saved to disk; every later development run replays from that file. Dev
+  iteration must cost zero credits. This also makes debugging sane, because
+  the data stops moving underneath you.
+- **The public demo serves pre-computed replays by default.** Live runs sit
+  behind a hard daily cap, or a single curious visitor drains the balance.
 
 ## Privacy
 
