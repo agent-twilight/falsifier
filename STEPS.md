@@ -30,7 +30,7 @@ End-to-end working comes before polish.
 
 - [x] ~~**1. Git repo, licence, scaffolding, pushed to private GitHub repo.**~~
   *Done when:* `git log` shows commits, `git check-ignore -v .env` prints a rule, and `.env` is absent from `git ls-tree -r origin/main`.
-- [ ] **2. Virtual environment and dependencies.** An isolated Python for this
+- [x] ~~**2. Virtual environment and dependencies.**~~ An isolated Python for this
   project, separate from Anaconda base.
   *Done when:* `.venv\Scripts\python.exe -c "import sys, fastapi; print(sys.prefix)"` prints a path ending in `falsifier\.venv`.
 - [x] ~~**3. Keys, base URL and the three Nemotron model ids in `.env`.**~~
@@ -38,7 +38,7 @@ End-to-end working comes before polish.
 - [ ] **4. Confirm Zero Data Retention is ON** in the Nebius account. Opt-in;
   the default stores prompts. Must be on before any real claim goes through.
   *Done when:* the toggle shows enabled on the profile page.
-- [ ] **5. Record per-token prices per tier, and the Tavily credit rate.**
+- [x] ~~**5. Record per-token prices per tier, and the Tavily credit rate.**~~
   Basic and advanced searches bill differently; the rate decides whether 1000
   credits is ~25 runs or ~12.
   *Done when:* both are written into a config file the spend cap can read.
