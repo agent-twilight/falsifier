@@ -22,6 +22,8 @@ These rules apply to every session in this folder.
 - Never write a file the user could not summarise in one sentence. If a file
   is doing something non-obvious, explain it before writing it.
 - Commit to git after every step that works, with a clear message.
+- When a step is finished, tick it **and strike it through** in [STEPS.md](STEPS.md)
+  (`- [x] ~~**12. ...**~~`), so progress is visible at a glance across sessions.
 - If the user seems confused, stop and explain rather than pressing on.
 
 ## What it is

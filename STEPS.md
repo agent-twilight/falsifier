@@ -28,12 +28,12 @@ End-to-end working comes before polish.
 
 ## Phase 0 — Setup
 
-- [x] **1. Git repo, `.gitignore`, MIT licence, project scaffolding.**
-  *Done when:* `git log` shows a commit and `git check-ignore -v .env` prints a rule.
+- [x] ~~**1. Git repo, licence, scaffolding, pushed to private GitHub repo.**~~
+  *Done when:* `git log` shows commits, `git check-ignore -v .env` prints a rule, and `.env` is absent from `git ls-tree -r origin/main`.
 - [ ] **2. Virtual environment and dependencies.** An isolated Python for this
   project, separate from Anaconda base.
   *Done when:* `.venv\Scripts\python.exe -c "import sys, fastapi; print(sys.prefix)"` prints a path ending in `falsifier\.venv`.
-- [x] **3. Keys, base URL and the three Nemotron model ids in `.env`.**
+- [x] ~~**3. Keys, base URL and the three Nemotron model ids in `.env`.**~~
   *Done when:* all six values are filled and `.env` is still gitignored.
 - [ ] **4. Confirm Zero Data Retention is ON** in the Nebius account. Opt-in;
   the default stores prompts. Must be on before any real claim goes through.
