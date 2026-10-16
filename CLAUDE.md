@@ -123,13 +123,41 @@ project, so the ceiling goes in before the first full run, not after.
 
 - **Token Factory: $29.** Builders Program credits are pending and may roughly
   double this to ~$54. Treat $29 as the number that has to work.
-- **Tavily: 1000 credits.** More requested, not granted. At ~40 searches per
-  claim that is ~25 full runs on basic search, ~12 on advanced. Confirm which
-  rate applies.
+- **Tavily: 1000 credits/month**, resetting monthly (not a one-off). Basic
+  search costs 1 credit, advanced 2. At ~40 basic searches per claim that is
+  **~25 full runs per month**. Rate limit 100 requests/minute.
 
-Real per-token prices are still unverified. Confirm them from the Token
-Factory pricing page and compute actual cost per claim on the first real run,
-from logged token counts rather than estimates.
+**Prices per 1M tokens** (reported 16 Oct; verify against the pricing page
+before hardcoding, and let the first measured run overrule them):
+
+| Tier | Model id | Input | Output | Context |
+|---|---|---|---|---|
+| Nano | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` | $0.06 | $0.24 | 32K |
+| Super | `nvidia/nemotron-3-super-120b-a12b` | $0.30 | $0.90 | 256K |
+| Ultra | `nvidia/Nemotron-3-Ultra-550b-a55b` | $1.00 | $3.00 | 1M |
+
+Ultra cache reads bill at the full $1.00/1M, so caching saves nothing there.
+
+**Cost per claim is roughly $0.09–$0.15** depending on token assumptions, so
+$29 buys *hundreds* of claims. **Tavily is therefore the binding constraint by
+more than 10x** — ~25 runs a month against ~200+ on Nebius. Protect searches,
+not tokens.
+
+**The all-Ultra baseline multiple must be measured, not asserted.** Holding
+token counts fixed and swapping every call to Ultra gives ~8x, not the ~20x
+quoted in early estimates; larger multiples assume Ultra would need bigger
+prompts. Compute it from logged tokens after real runs and publish whatever it
+actually is. An inflated multiple in the README is worse than a modest true
+one, because a judge can check it.
+
+**Two traps, both of which silently cost money:**
+
+- **Pin `search_depth="basic"` explicitly.** Tavily's `auto_parameters` can
+  promote a search to advanced depth on its own and double the credit cost
+  without saying so.
+- **Nano's context is only 32K**, and Nano does the ~400 triage calls over
+  retrieved page content. Truncate retrieved text before it reaches Nano and
+  handle overflow deliberately rather than crashing mid-run.
 
 **Tavily credits are the binding constraint, not Nebius credits.** Two rules
 follow, both load-bearing:
@@ -140,6 +168,15 @@ follow, both load-bearing:
   the data stops moving underneath you.
 - **The public demo serves pre-computed replays by default.** Live runs sit
   behind a hard daily cap, or a single curious visitor drains the balance.
+
+**Deployment constraint (step 32):** the loop needs a daily schedule *and* a
+filesystem that persists between runs, because state lives in SQLite. That
+rules out ephemeral runners such as GitHub Actions unless state is stored
+elsewhere.
+
+**Notifications: email** — chosen because it is checked daily. Telegram
+remains under consideration purely for the video: a phone notification
+arriving unprompted reads better on camera than an inbox screenshot.
 
 ## Privacy
 
