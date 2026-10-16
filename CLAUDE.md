@@ -174,9 +174,10 @@ filesystem that persists between runs, because state lives in SQLite. That
 rules out ephemeral runners such as GitHub Actions unless state is stored
 elsewhere.
 
-**Notifications: email** — chosen because it is checked daily. Telegram
-remains under consideration purely for the video: a phone notification
-arriving unprompted reads better on camera than an inbox screenshot.
+**Notifications: Telegram bot** (decided 16 Oct, over email). Less setup than
+email — a bot token and an HTTP POST, with no SMTP server or app password —
+and a phone notification arriving unprompted reads far better on video than an
+inbox screenshot. `TELEGRAM_BOT_TOKEN` is a secret and lives in `.env`.
 
 ## Privacy
 

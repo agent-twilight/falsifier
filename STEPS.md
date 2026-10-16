@@ -42,6 +42,10 @@ End-to-end working comes before polish.
   Basic and advanced searches bill differently; the rate decides whether 1000
   credits is ~25 runs or ~12.
   *Done when:* both are written into a config file the spend cap can read.
+- [ ] **5b. Create the Telegram bot and capture its token and chat id.** Done
+  early because it is a prerequisite for step 31 and takes three minutes.
+  Numbered 5b so the existing step numbers stay stable.
+  *Done when:* `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are in `.env` and a test message arrives on your phone.
 
 ## Phase 1 — Plumbing
 
@@ -119,8 +123,10 @@ logs only exist for the days the loop has actually been running.
 - [ ] **30. Daily loop.** Wakes, re-checks what is due, stays silent unless
   something changed.
   *Done when:* it runs three consecutive days and says nothing on a day with no change.
-- [ ] **31. One notification channel.**
-  *Done when:* a real change reaches you outside the app.
+- [ ] **31. Telegram notification on change.** Chosen over email: no SMTP or
+  app password, and a phone notification arriving unprompted reads far better
+  on video than an inbox screenshot.
+  *Done when:* a real retraction reaches your phone, with the claim and the reason.
 - [ ] **32. GATE — deploy the loop and leave it running.** From here the logs
   accumulate on their own while everything else is built.
   *Done when:* it runs unattended, off your laptop, for a full day without you touching it.
