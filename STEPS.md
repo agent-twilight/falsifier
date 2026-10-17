@@ -49,7 +49,7 @@ End-to-end working comes before polish.
 
 ## Phase 1 — Plumbing
 
-- [ ] **6. One Nemotron call that returns text.** The "is any of this real"
+- [x] ~~**6. One Nemotron call that returns text.**~~ The "is any of this real"
   test, and the first check of whether those model ids are correct.
   *Done when:* running one script prints a model reply in the terminal.
 - [ ] **7. SQLite database and schema.** Tables for calls, claims, sub-claims,

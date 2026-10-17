@@ -91,6 +91,31 @@ MAX_SEARCHES_PER_RUN = 45  # expected ~40
 TRIAGE_MAX_CHARS = 6_000
 
 
+# --------------------------------------------------------------------------
+# Reasoning behaviour. Measured 17 Oct 2026, see FEEDBACK.md.
+#
+# All three Nemotron 3 tiers are reasoning models. They emit a separate
+# `reasoning` field, and those thinking tokens are billed as output. If
+# max_tokens is too small the reasoning consumes the whole budget and
+# `content` comes back as an EMPTY STRING with finish_reason "stop" - no
+# error, no warning. That is a silent-failure trap, so never call these
+# models with a tight token budget.
+# --------------------------------------------------------------------------
+MAX_TOKENS_FLOOR = 600
+
+# "/no_think" as a system message suppresses most reasoning. The documented
+# Nemotron 2 phrasing "detailed thinking off" does NOT work on Nemotron 3.
+# Do not use reasoning_effort="none": it returns empty content silently.
+NO_THINK_SYSTEM_PROMPT = "/no_think"
+
+# Measured mean output tokens for a triage call: 190 with reasoning on,
+# 108 with /no_think. A 43% saving across ~400 calls per claim. Answers
+# matched on a 3-sample check, which is suggestive, not proof - validate on
+# a larger sample before trusting /no_think for all triage.
+TRIAGE_OUTPUT_TOKENS_THINKING = 190
+TRIAGE_OUTPUT_TOKENS_NO_THINK = 108
+
+
 def missing_credentials() -> list[str]:
     """Names of required settings that are still empty. Values never shown."""
     required = {
@@ -109,13 +134,15 @@ def estimated_claim_cost() -> float:
 
     Superseded by measured cost as soon as the calls table has real rows.
     """
+    # Output token counts revised upward on 17 Oct after measuring real
+    # reasoning overhead. Triage is measured; the rest are still estimates.
     plan = [
-        (NANO, 400, 1_000, 50),  # triage
-        (NANO, 50, 500, 250),  # falsification hypotheses
-        (NANO, 12, 400, 150),  # search angles
-        (SUPER, 25, 3_000, 300),  # read, grade, extract the line
-        (SUPER, 1, 600, 400),  # decompose
-        (ULTRA, 2, 8_000, 1_000),  # which objections survive
+        (NANO, 400, 1_000, 110),  # triage (measured, /no_think)
+        (NANO, 50, 500, 400),  # falsification hypotheses
+        (NANO, 12, 400, 300),  # search angles
+        (SUPER, 25, 3_000, 500),  # read, grade, extract the line
+        (SUPER, 1, 600, 800),  # decompose
+        (ULTRA, 2, 8_000, 1_500),  # which objections survive
     ]
     return sum(tier.cost(tin, tout) * calls for tier, calls, tin, tout in plan)
 
