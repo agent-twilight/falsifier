@@ -123,9 +123,11 @@ project, so the ceiling goes in before the first full run, not after.
 
 - **Token Factory: $29.** Builders Program credits are pending and may roughly
   double this to ~$54. Treat $29 as the number that has to work.
-- **Tavily: 1000 credits/month**, resetting monthly (not a one-off). Basic
-  search costs 1 credit, advanced 2. At ~40 basic searches per claim that is
-  **~25 full runs per month**. Rate limit 100 requests/minute.
+- **Tavily: 1000 credits/month, 0 used as of 17 Oct.** Basic search costs 1
+  credit, advanced 2. At ~40 basic searches per claim that is **~22 full runs
+  per month**. Rate limit 100 requests/minute. The dashboard shows **no fixed
+  renewal date**, so assume no reset arrives before the 30 Oct deadline and
+  treat 1000 as the whole budget. Anything that does land is a bonus.
 
 **Prices per 1M tokens** (reported 16 Oct; verify against the pricing page
 before hardcoding, and let the first measured run overrule them):
@@ -181,8 +183,8 @@ inbox screenshot. `TELEGRAM_BOT_TOKEN` is a secret and lives in `.env`.
 
 ## Privacy
 
-- Zero Data Retention must be ON in the Nebius account (opt-in; the default
-  stores prompts).
+- Zero Data Retention: **confirmed enabled 17 Oct 2026.** Real claims may now
+  go through the hosted models.
 - Send the **minimum relevant slice** of memory per request, never the whole
   file. Most claims need three or four situational facts.
 - The claim register is personal data. `data/` and `*.db` are gitignored and

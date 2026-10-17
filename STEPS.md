@@ -35,14 +35,14 @@ End-to-end working comes before polish.
   *Done when:* `.venv\Scripts\python.exe -c "import sys, fastapi; print(sys.prefix)"` prints a path ending in `falsifier\.venv`.
 - [x] ~~**3. Keys, base URL and the three Nemotron model ids in `.env`.**~~
   *Done when:* all six values are filled and `.env` is still gitignored.
-- [ ] **4. Confirm Zero Data Retention is ON** in the Nebius account. Opt-in;
+- [x] ~~**4. Confirm Zero Data Retention is ON**~~ in the Nebius account. Opt-in;
   the default stores prompts. Must be on before any real claim goes through.
   *Done when:* the toggle shows enabled on the profile page.
 - [x] ~~**5. Record per-token prices per tier, and the Tavily credit rate.**~~
   Basic and advanced searches bill differently; the rate decides whether 1000
   credits is ~25 runs or ~12.
   *Done when:* both are written into a config file the spend cap can read.
-- [ ] **5b. Create the Telegram bot and capture its token and chat id.** Done
+- [x] ~~**5b. Create the Telegram bot and capture its token and chat id.**~~ Done
   early because it is a prerequisite for step 31 and takes three minutes.
   Numbered 5b so the existing step numbers stay stable.
   *Done when:* `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are in `.env` and a test message arrives on your phone.
@@ -52,7 +52,7 @@ End-to-end working comes before polish.
 - [x] ~~**6. One Nemotron call that returns text.**~~ The "is any of this real"
   test, and the first check of whether those model ids are correct.
   *Done when:* running one script prints a model reply in the terminal.
-- [ ] **7. SQLite database and schema.** Tables for calls, claims, sub-claims,
+- [x] ~~**7. SQLite database and schema.**~~ Tables for calls, claims, sub-claims,
   hypotheses, evidence, objections, sources.
   *Done when:* the file exists in `data/` and the table list prints.
 - [ ] **8. The call wrapper.** A single function every model call goes through,
