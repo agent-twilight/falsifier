@@ -79,6 +79,16 @@ Verify the right interpreter with:
 `.venv\Scripts\python.exe -c "import sys; print(sys.prefix)"`
 — must print a path ending in `falsifier\.venv`.
 
+**Windows console encoding.** Model output contains unicode (curly quotes,
+non-breaking hyphens) and Windows consoles default to cp1252, so printing a
+reply raises `UnicodeEncodeError`. Any script that prints model output must
+call `sys.stdout.reconfigure(encoding="utf-8", errors="replace")`, or be run
+with `PYTHONIOENCODING=utf-8`. Storage is unaffected; SQLite is UTF-8.
+
+**Every model call goes through `falsifier.clients.nebius.complete()`.**
+Nothing else may construct an OpenAI client — the cost table, the spend cap
+and the tiering numbers all depend on calls being visible to the wrapper.
+
 ## Three rules enforced in code, not in prompts
 
 These are correctness requirements, not style preferences. A language model

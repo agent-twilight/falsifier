@@ -55,7 +55,7 @@ End-to-end working comes before polish.
 - [x] ~~**7. SQLite database and schema.**~~ Tables for calls, claims, sub-claims,
   hypotheses, evidence, objections, sources.
   *Done when:* the file exists in `data/` and the table list prints.
-- [ ] **8. The call wrapper.** A single function every model call goes through,
+- [x] ~~**8. The call wrapper.**~~ A single function every model call goes through,
   logging model, input tokens, output tokens, latency and computed cost.
   *Done when:* one call through the wrapper produces one row with all fields filled.
 - [ ] **9. Spend cap and per-run call ceiling inside the wrapper.** $29 against
