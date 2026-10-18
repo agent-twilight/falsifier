@@ -132,3 +132,92 @@ def test_failed_calls_still_count_toward_tier_volume(monkeypatch, conn):
         "SELECT count(*) FROM calls WHERE tier='nano'"
     ).fetchone()[0]
     assert count == 3
+
+
+# ---------------------------------------------------------------------------
+# Step 9: the spend cap. A cap that notices after the money is gone is not a
+# cap, so every test here asserts that NO request was sent.
+# ---------------------------------------------------------------------------
+
+
+def _spend(conn, dollars):
+    """Put a known amount of historical spend in the calls table."""
+    conn.execute(
+        "INSERT INTO calls (tier, model, stage, cost_usd) "
+        "VALUES ('nano', 'm', 'seed', ?)",
+        (dollars,),
+    )
+    conn.commit()
+
+
+def test_total_budget_cap_refuses_before_sending(monkeypatch, conn):
+    calls = install_fake(monkeypatch, fake_response("hi"))
+    _spend(conn, config.TOTAL_BUDGET_USD)
+
+    with pytest.raises(nebius.BudgetExceeded, match="total budget"):
+        nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+
+    assert calls == [], "no request may be sent once the budget is gone"
+
+
+def test_daily_cap_refuses_before_sending(monkeypatch, conn):
+    calls = install_fake(monkeypatch, fake_response("hi"))
+    _spend(conn, config.DAILY_SPEND_CAP_USD)
+
+    with pytest.raises(nebius.BudgetExceeded, match="daily cap"):
+        nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+
+    assert calls == []
+
+
+def test_per_run_call_ceiling_catches_a_retry_loop(monkeypatch, conn):
+    """The failure mode named in the project's own risk list."""
+    calls = install_fake(monkeypatch, fake_response("hi"))
+    conn.execute("INSERT INTO claims (id, text) VALUES (1, 'a claim')")
+    conn.execute("INSERT INTO runs (id, claim_id, mode) VALUES (7, 1, 'personal')")
+    for _ in range(config.MAX_CALLS_PER_RUN):
+        conn.execute(
+            "INSERT INTO calls (run_id, tier, model, stage) "
+            "VALUES (7, 'nano', 'm', 'triage')"
+        )
+    conn.commit()
+
+    with pytest.raises(nebius.BudgetExceeded, match="retry loop"):
+        nebius.complete(config.NANO, "x", stage="triage", run_id=7, conn=conn)
+
+    assert calls == []
+
+
+def test_refusals_are_not_logged_as_calls(monkeypatch, conn):
+    """`calls` means requests actually sent, or per-tier volume is wrong."""
+    install_fake(monkeypatch, fake_response("hi"))
+    _spend(conn, config.TOTAL_BUDGET_USD)
+    before = conn.execute("SELECT count(*) FROM calls").fetchone()[0]
+
+    with pytest.raises(nebius.BudgetExceeded):
+        nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+
+    after = conn.execute("SELECT count(*) FROM calls").fetchone()[0]
+    assert after == before
+
+
+def test_cap_accounts_for_the_cost_this_call_could_add(monkeypatch, conn):
+    """Refuse when the worst case would breach, not only once it has."""
+    calls = install_fake(monkeypatch, fake_response("hi"))
+    # Just under the daily cap, but one Ultra call at max_tokens exceeds it.
+    _spend(conn, config.DAILY_SPEND_CAP_USD - 0.001)
+
+    with pytest.raises(nebius.BudgetExceeded):
+        nebius.complete(config.ULTRA, "x" * 4000, stage="survive",
+                        max_tokens=2000, conn=conn)
+
+    assert calls == []
+
+
+def test_a_call_within_budget_still_goes_through(monkeypatch, conn):
+    """The cap must not block ordinary work."""
+    calls = install_fake(monkeypatch, fake_response("YES"))
+    _spend(conn, 0.0001)
+    result = nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+    assert result.text == "YES"
+    assert len(calls) == 1

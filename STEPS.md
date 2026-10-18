@@ -58,7 +58,7 @@ End-to-end working comes before polish.
 - [x] ~~**8. The call wrapper.**~~ A single function every model call goes through,
   logging model, input tokens, output tokens, latency and computed cost.
   *Done when:* one call through the wrapper produces one row with all fields filled.
-- [ ] **9. Spend cap and per-run call ceiling inside the wrapper.** $29 against
+- [x] ~~**9. Spend cap and per-run call ceiling inside the wrapper.**~~ $29 against
   ~490 calls per claim; one retry bug could end the project.
   *Done when:* a deliberate over-limit test is refused with a clear error and no call is made.
 - [ ] **10. Cost per claim, computed from real logged token counts.**

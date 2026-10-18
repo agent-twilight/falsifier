@@ -39,6 +39,10 @@ class EmptyCompletion(ModelCallError):
     """The model returned no content, usually having spent max_tokens thinking."""
 
 
+class BudgetExceeded(ModelCallError):
+    """A cap would have been breached. No request was sent, nothing was spent."""
+
+
 @dataclass(frozen=True)
 class Completion:
     """What a successful call produced, plus what it cost."""
@@ -89,6 +93,65 @@ def _log(
             connection.close()
 
 
+def _estimate_input_tokens(messages: list[dict[str, str]]) -> int:
+    """Cheap upper-ish estimate. Roughly four characters per token.
+
+    Deliberately not exact: the point is to refuse a call *before* sending it,
+    and an approximate bound is enough for a circuit breaker. The real token
+    count is recorded afterwards from the API response.
+    """
+    characters = sum(len(message["content"]) for message in messages)
+    return characters // 4 + 20
+
+
+def check_budget(
+    tier: config.Tier,
+    messages: list[dict[str, str]],
+    max_tokens: int,
+    run_id: int | None,
+    conn: sqlite3.Connection | None,
+) -> None:
+    """Raise BudgetExceeded if this call could breach a cap.
+
+    Checked before the request is sent, and costed at the worst case: the
+    prompt as estimated, plus the full max_tokens as output. A cap that only
+    notices after the money is gone is not a cap.
+
+    Refusals are deliberately NOT written to `calls`. That table means
+    "requests actually sent", and the README's per-tier volume is computed
+    from it. A run halted by the cap is recorded on `runs.status` instead.
+    """
+    owned = conn is None
+    connection = conn or db.connect()
+    try:
+        total = spend_total(connection)
+        today = spend_today(connection)
+        worst_case = tier.cost(_estimate_input_tokens(messages), max_tokens)
+
+        if total + worst_case > config.TOTAL_BUDGET_USD:
+            raise BudgetExceeded(
+                f"total budget: ${total:.4f} spent, this call could add "
+                f"${worst_case:.4f}, ceiling ${config.TOTAL_BUDGET_USD:.2f}"
+            )
+        if today + worst_case > config.DAILY_SPEND_CAP_USD:
+            raise BudgetExceeded(
+                f"daily cap: ${today:.4f} spent today, this call could add "
+                f"${worst_case:.4f}, ceiling ${config.DAILY_SPEND_CAP_USD:.2f}"
+            )
+        if run_id is not None:
+            calls_so_far = connection.execute(
+                "SELECT count(*) FROM calls WHERE run_id = ?", (run_id,)
+            ).fetchone()[0]
+            if calls_so_far >= config.MAX_CALLS_PER_RUN:
+                raise BudgetExceeded(
+                    f"run {run_id} has made {calls_so_far} calls, ceiling "
+                    f"{config.MAX_CALLS_PER_RUN}. Likely a retry loop."
+                )
+    finally:
+        if owned:
+            connection.close()
+
+
 def complete(
     tier: config.Tier,
     prompt: str,
@@ -122,6 +185,8 @@ def complete(
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
+
+    check_budget(tier, messages, max_tokens, run_id, conn)
 
     row = {
         "run_id": run_id,
