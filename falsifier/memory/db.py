@@ -108,7 +108,14 @@ CREATE TABLE IF NOT EXISTS evidence (
                     CHECK (source_tier IN ('primary', 'secondary', 'weak')),
     source_date     TEXT,
     undated         INTEGER NOT NULL DEFAULT 0,
-    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    -- Freshness. The agent cannot know a fact is current; it can know when
+    -- the page last changed, and whether it has changed since we looked.
+    last_modified   TEXT,   -- what the server reports, not what we assume
+    etag            TEXT,   -- lets a re-check cost one 304 and no body
+    content_hash    TEXT,   -- detects change the ETag missed
+    last_checked_at TEXT,
+    quote_still_present INTEGER NOT NULL DEFAULT 1
 );
 
 -- Findings, of all three kinds. Named findings rather than objections
