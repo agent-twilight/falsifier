@@ -7,21 +7,33 @@ significant design work. [STEPS.md](STEPS.md) is the progress tracker.
 
 ## How to work with me
 
-These rules apply to every session in this folder.
+**Mode changed 18 Oct 2026: build autonomously.** The earlier rule was one
+step at a time, waiting for "go" before each. That was too slow against the
+deadline. Now: keep building without asking permission between steps, and
+interrupt only for the things listed below.
 
-- The user is new to building applications. Explain everything in plain
-  language as you go.
-- Work in small steps, one at a time. A step is something that can be verified
-  in a few minutes. Never batch several steps together.
-- **Before each step:** say what you are about to do, why, and what will exist
-  when it is finished. Then wait for the user to say go.
-- **After each step:** show what changed, explain any new concept in plain
-  language, and run something that proves it works — output, a test, a printed
-  result. Never claim done without demonstrating it.
-- Then stop and wait. Do not begin the next step unprompted.
-- Never write a file the user could not summarise in one sentence. If a file
-  is doing something non-obvious, explain it before writing it.
-- Commit to git after every step that works, with a clear message.
+- The user is new to building applications. Explain in plain language, but at
+  checkpoints rather than before and after every step.
+- Work in batches. Commit after each piece that works and passes its tests.
+- Report at meaningful checkpoints: what was built, what it proves, what is
+  next. Not a running commentary.
+- Never claim something works without running it and showing the output.
+- Never write a file the user could not summarise in one sentence.
+- Keep ticking and striking through steps in STEPS.md as they land.
+
+**Stop and ask only for these:**
+
+1. **Anything needing their accounts or money** — hosting choice, paid plans,
+   a Tavily upgrade.
+2. **The first real claim** (step 27 gate). It has to be a belief they
+   actually hold; inventing one defeats the point.
+3. **Judgment on output quality** — whether generated hypotheses are genuine
+   falsifications or restatements. Show samples and ask. Do not self-certify
+   this; the user knows what would change their mind.
+4. **Anything that spends more than ~20 Tavily credits in one go.** ~22 runs
+   exist in total, so this is the one budget that still binds.
+5. **Irreversible or outward-facing acts** — making the repo public,
+   publishing the video, submitting.
 - When a step is finished, tick it **and strike it through** in [STEPS.md](STEPS.md)
   (`- [x] ~~**12. ...**~~`), so progress is visible at a glance across sessions.
 - If the user seems confused, stop and explain rather than pressing on.

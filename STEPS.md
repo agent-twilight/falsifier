@@ -61,15 +61,15 @@ End-to-end working comes before polish.
 - [x] ~~**9. Spend cap and per-run call ceiling inside the wrapper.**~~ $29 against
   ~490 calls per claim; one retry bug could end the project.
   *Done when:* a deliberate over-limit test is refused with a clear error and no call is made.
-- [ ] **10. Cost per claim, computed from real logged token counts.**
+- [x] ~~**10. Cost per claim, computed from real logged token counts.**~~
   *Done when:* a printed estimate for one full run exists and is affordable against $29.
-- [ ] **11. One Tavily search returning results.**
+- [x] ~~**11. One Tavily search returning results.**~~
   *Done when:* a script prints titles and URLs for one query.
-- [ ] **12. Record-and-replay fixtures.** Save every real Tavily response to
+- [x] ~~**12. Record-and-replay fixtures.**~~ Save every real Tavily response to
   disk; replay from file in development. Credits are the binding constraint,
   so dev iteration must cost zero.
   *Done when:* the pipeline can run start to finish with the network off.
-- [ ] **13. Query cache.** Never re-search a query already answered, even in
+- [x] ~~**13. Query cache.**~~ Never re-search a query already answered, even in
   live mode.
   *Done when:* the same query twice makes one network call.
 

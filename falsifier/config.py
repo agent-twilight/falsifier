@@ -81,7 +81,7 @@ TAVILY_SEARCH_DEPTH = "basic"
 # These are circuit breakers against a runaway retry loop, not spending plans.
 # --------------------------------------------------------------------------
 TOTAL_BUDGET_USD = 29.00
-DAILY_SPEND_CAP_USD = 2.00
+DAILY_SPEND_CAP_USD = 5.00  # raised 18 Oct: a bug-catcher, not a ration
 MAX_CALLS_PER_RUN = 600  # expected ~490
 MAX_SEARCHES_PER_RUN = 45  # expected ~40
 
@@ -114,6 +114,11 @@ NO_THINK_SYSTEM_PROMPT = "/no_think"
 # a larger sample before trusting /no_think for all triage.
 TRIAGE_OUTPUT_TOKENS_THINKING = 190
 TRIAGE_OUTPUT_TOKENS_NO_THINK = 108
+
+# Default to full reasoning. /no_think was only ever a cost saving, and cost
+# is no longer the binding constraint; quality is. Flip this only if the
+# triage eval shows /no_think is as accurate.
+TRIAGE_USE_NO_THINK = False
 
 
 def missing_credentials() -> list[str]:
