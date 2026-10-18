@@ -92,8 +92,10 @@ so iteration is free. Ugly is fine here; working is the only requirement.
   *Done when:* each survivor has a quoted line, a live link, a source tier and a date or undated flag.
 - [ ] **20. Enforce rule 1 in code.** No quoted line and live link, no objection.
   *Done when:* a fabricated objection with an empty evidence field is dropped automatically, proven by a test.
-- [ ] **21. Decide which objections actually survive** (Ultra).
-  *Done when:* some objections are rejected with a stated reason, not all passed through.
+- [x] ~~**21. Decide the verdict: challenged, supported or unverifiable**~~ (Ultra).
+  Reframed 18 Oct: agreeing with the user is a result, not a failure, and an
+  unsettleable claim must say what is missing rather than manufacture doubt.
+  *Done when:* a true claim returns SUPPORTS with a citation, a false one returns CHALLENGES, and an unanswerable one returns UNVERIFIABLE with a reason.
 - [ ] **22. "Found nothing" as a first-class output.**
   *Done when:* a claim with no disconfirming evidence produces a prominent "found nothing" result, never a weak invented objection.
 - [ ] **23. Write the counter-case artifact to disk.**

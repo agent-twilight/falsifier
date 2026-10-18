@@ -55,6 +55,20 @@ retracts them when they stop holding.
 The hard part: search engines are confirmation machines. The agent has to
 invent the opposition before it can search for it. That is the core IP.
 
+**Reframed 18 Oct 2026, by the user, and this overrides the framing in
+README1.md.** It is a verification and correction tool, not a contrarian.
+Attacking the claim is the *method*; the honest verdict is the *product*.
+Every claim ends in one of three states, and all three are cited:
+
+- **CHALLENGED** - surviving objections, each with a quoted line and a link
+- **SUPPORTED** - the attack was attempted and the claim held. Say so, with
+  the evidence that supports it. Agreeing is a result, not a failure.
+- **UNVERIFIABLE** - it cannot be settled, and the reason is stated: the
+  claim is too vague, the user has not supplied something only they know,
+  or no public evidence exists either way. Never dress this up as a verdict.
+
+An agent that always finds fault is as broken as one that always agrees.
+
 Two track requirements are deliberate build items, not side effects of the
 pipeline — **reusable skills** (falsification routines per class of claim) and
 **tasks not answers** (counter-case artifact, draft extraction, retraction).

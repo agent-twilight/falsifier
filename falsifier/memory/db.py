@@ -6,10 +6,12 @@ computed from real data rather than estimates.
 
 Two design decisions worth knowing:
 
-1. **Rule 1 is enforced by the database, not by a prompt.** An objection
-   cannot exist without an evidence row, and an evidence row cannot exist
-   without a non-empty quoted line and URL. CHECK constraints make a
-   fabricated objection unstorable rather than merely discouraged.
+1. **Rule 1 is enforced by the database, not by a prompt.** A finding that
+   challenges or supports a claim cannot exist without an evidence row, and
+   an evidence row cannot exist without a non-empty quoted line and URL. A
+   finding that claims something is unverifiable must instead carry a
+   written reason. CHECK constraints make an unsupported verdict unstorable
+   rather than merely discouraged.
 
 2. **Every table that holds user content carries a `mode`.** Personal runs
    and public demo runs share one schema but never share rows, so the demo
@@ -109,22 +111,39 @@ CREATE TABLE IF NOT EXISTS evidence (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- evidence_id is NOT NULL on purpose: an objection without evidence is
--- unstorable, so rule 1 cannot be violated even by buggy code.
-CREATE TABLE IF NOT EXISTS objections (
+-- Findings, of all three kinds. Named findings rather than objections
+-- because agreeing with the user is a legitimate result: see CLAUDE.md.
+--
+-- Rule 1 survives the reframing, via the table CHECK below:
+--   challenges / supports  -> MUST carry evidence (a quoted line and a link)
+--   unverifiable           -> MUST carry a reason, and has no evidence
+-- So a verdict either rests on a real quote, or explains why none exists.
+-- There is no third option where it merely asserts something.
+CREATE TABLE IF NOT EXISTS findings (
     id                  INTEGER PRIMARY KEY,
     claim_id            INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
     sub_claim_id        INTEGER REFERENCES sub_claims(id) ON DELETE SET NULL,
     hypothesis_id       INTEGER REFERENCES hypotheses(id) ON DELETE SET NULL,
-    evidence_id         INTEGER NOT NULL REFERENCES evidence(id),
+    evidence_id         INTEGER REFERENCES evidence(id),
+    stance              TEXT NOT NULL
+                        CHECK (stance IN ('challenges', 'supports',
+                                          'unverifiable')),
     text                TEXT NOT NULL CHECK (trim(text) <> ''),
+    reason              TEXT,
     confidence          REAL CHECK (confidence BETWEEN 0 AND 1),
     status              TEXT NOT NULL DEFAULT 'live'
                         CHECK (status IN ('live', 'retracted', 'superseded')),
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     next_check_at       TEXT,
     retracted_at        TEXT,
-    retracted_reason    TEXT
+    retracted_reason    TEXT,
+
+    CHECK (
+        (stance IN ('challenges', 'supports') AND evidence_id IS NOT NULL)
+        OR
+        (stance = 'unverifiable' AND evidence_id IS NULL
+         AND reason IS NOT NULL AND trim(reason) <> '')
+    )
 );
 
 -- Every model call, logged by the wrapper. The cost table is a query over
@@ -156,15 +175,15 @@ CREATE TABLE IF NOT EXISTS sources (
 
 CREATE INDEX IF NOT EXISTS idx_calls_run ON calls(run_id);
 CREATE INDEX IF NOT EXISTS idx_calls_created ON calls(created_at);
-CREATE INDEX IF NOT EXISTS idx_objections_claim ON objections(claim_id);
-CREATE INDEX IF NOT EXISTS idx_objections_due
-    ON objections(next_check_at) WHERE status = 'live';
+CREATE INDEX IF NOT EXISTS idx_findings_claim ON findings(claim_id);
+CREATE INDEX IF NOT EXISTS idx_findings_due
+    ON findings(next_check_at) WHERE status = 'live';
 CREATE INDEX IF NOT EXISTS idx_searches_query ON searches(query);
 """
 
 TABLES = (
     "claims", "runs", "sub_claims", "hypotheses", "searches",
-    "results", "evidence", "objections", "calls", "sources",
+    "results", "evidence", "findings", "calls", "sources",
 )
 
 

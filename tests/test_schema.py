@@ -1,6 +1,10 @@
-"""The database must make a fabricated objection impossible to store.
+"""The database must make an unsupported verdict impossible to store.
 
-Rule 1 says: no objection without a retrieved, quoted line and a live link.
+Rule 1, after the 18 Oct reframing: a finding that challenges or supports a
+claim needs a retrieved quoted line and a live link; a finding that says
+something is unverifiable needs a written reason instead. There is no third
+option where the agent simply asserts a conclusion.
+
 These tests check the constraint holds at the storage layer, where buggy
 pipeline code cannot talk its way around it.
 """
@@ -37,14 +41,80 @@ def _claim_chain(conn) -> tuple[int, int]:
     return claim_id, hyp_id
 
 
-def test_objection_requires_evidence(conn):
-    """The core of rule 1: an objection with no evidence cannot be stored."""
+def test_challenge_requires_evidence(conn):
+    """The core of rule 1: a challenge with no evidence cannot be stored."""
     claim_id, hyp_id = _claim_chain(conn)
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(
-            "INSERT INTO objections (claim_id, hypothesis_id, evidence_id, text) "
-            "VALUES (?, ?, NULL, 'Sounds risky to me')",
+            "INSERT INTO findings (claim_id, hypothesis_id, evidence_id, stance, text) "
+            "VALUES (?, ?, NULL, 'challenges', 'Sounds risky to me')",
             (claim_id, hyp_id),
+        )
+
+
+def test_agreement_also_requires_evidence(conn):
+    """Agreeing is a verdict too, so it needs a source like any other."""
+    claim_id, hyp_id = _claim_chain(conn)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO findings (claim_id, hypothesis_id, evidence_id, stance, text) "
+            "VALUES (?, ?, NULL, 'supports', 'Seems right to me')",
+            (claim_id, hyp_id),
+        )
+
+
+def test_unverifiable_requires_a_stated_reason(conn):
+    """Saying 'cannot tell' is only honest if it says why."""
+    claim_id, _ = _claim_chain(conn)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO findings (claim_id, stance, text, reason) "
+            "VALUES (?, 'unverifiable', 'Cannot determine', NULL)",
+            (claim_id,),
+        )
+
+
+def test_unverifiable_with_a_reason_is_accepted(conn):
+    claim_id, _ = _claim_chain(conn)
+    conn.execute(
+        "INSERT INTO findings (claim_id, stance, text, reason) VALUES "
+        "(?, 'unverifiable', 'Cannot determine whether this applies to you', "
+        "'You have not said which programme you are applying to.')",
+        (claim_id,),
+    )
+    conn.commit()
+    row = conn.execute("SELECT reason FROM findings").fetchone()
+    assert "which programme" in row["reason"]
+
+
+def test_unverifiable_may_not_smuggle_in_evidence(conn):
+    """If there is evidence, it is not unverifiable."""
+    claim_id, hyp_id = _claim_chain(conn)
+    ev = conn.execute(
+        "INSERT INTO evidence (hypothesis_id, quoted_line, url, source_tier) "
+        "VALUES (?, 'a real line', 'https://example.edu', 'primary')",
+        (hyp_id,),
+    ).lastrowid
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO findings (claim_id, evidence_id, stance, text, reason) "
+            "VALUES (?, ?, 'unverifiable', 'Cannot tell', 'no reason really')",
+            (claim_id, ev),
+        )
+
+
+def test_stance_must_be_one_of_the_three(conn):
+    claim_id, hyp_id = _claim_chain(conn)
+    ev = conn.execute(
+        "INSERT INTO evidence (hypothesis_id, quoted_line, url, source_tier) "
+        "VALUES (?, 'a line', 'https://example.edu', 'primary')",
+        (hyp_id,),
+    ).lastrowid
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO findings (claim_id, evidence_id, stance, text) "
+            "VALUES (?, ?, 'probably wrong', 'x')",
+            (claim_id, ev),
         )
 
 
@@ -78,7 +148,7 @@ def test_source_tier_is_constrained(conn):
         )
 
 
-def test_a_properly_evidenced_objection_is_accepted(conn):
+def test_a_properly_evidenced_finding_is_accepted(conn):
     """The positive case: with a line and a link, it stores."""
     claim_id, hyp_id = _claim_chain(conn)
     evidence_id = conn.execute(
@@ -88,14 +158,14 @@ def test_a_properly_evidenced_objection_is_accepted(conn):
         (hyp_id,),
     ).lastrowid
     conn.execute(
-        "INSERT INTO objections (claim_id, hypothesis_id, evidence_id, text, confidence) "
-        "VALUES (?, ?, ?, 'The published class profile shows most admits come straight from undergrad', 0.8)",
+        "INSERT INTO findings (claim_id, hypothesis_id, evidence_id, stance, text, confidence) "
+        "VALUES (?, ?, ?, 'challenges', 'The published class profile shows most admits come straight from undergrad', 0.8)",
         (claim_id, hyp_id, evidence_id),
     )
     conn.commit()
     stored = conn.execute(
-        "SELECT o.text, e.quoted_line, e.url, e.source_tier "
-        "FROM objections o JOIN evidence e ON e.id = o.evidence_id"
+        "SELECT f.text, e.quoted_line, e.url, e.source_tier "
+        "FROM findings f JOIN evidence e ON e.id = f.evidence_id"
     ).fetchone()
     assert stored["url"].startswith("https://")
     assert stored["source_tier"] == "primary"
