@@ -78,9 +78,9 @@ End-to-end working comes before polish.
 One claim in, one sourced counter-case out. Built against replayed fixtures,
 so iteration is free. Ugly is fine here; working is the only requirement.
 
-- [ ] **14. Decompose a claim into load-bearing sub-claims** (Super).
+- [x] ~~**14. Decompose a claim into load-bearing sub-claims**~~ (Super).
   *Done when:* a typed claim prints 3–5 sub-claims that are genuinely what it rests on.
-- [ ] **15. Generate falsification hypotheses per sub-claim** (Nano, ~50).
+- [x] ~~**15. Generate falsification hypotheses per sub-claim**~~ (Nano, ~50).
   *Done when:* they are ways the sub-claim could be *false*, not restatements of it.
 - [ ] **16. Generate search angles per hypothesis** (Nano).
   *Done when:* the queries would surface disconfirming evidence, not the original claim.

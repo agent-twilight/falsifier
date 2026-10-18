@@ -14,6 +14,10 @@ interrupt only for the things listed below.
 
 - The user is new to building applications. Explain in plain language, but at
   checkpoints rather than before and after every step.
+- **Keep reports short and non-technical** (noted 18 Oct, the user said the
+  detail was not landing). Lead with what it does for them in one or two
+  plain sentences. No code blocks, token counts, SQL or test names in the
+  summary unless they ask. Detail is available on request, not by default.
 - Work in batches. Commit after each piece that works and passes its tests.
 - Report at meaningful checkpoints: what was built, what it proves, what is
   next. Not a running commentary.
