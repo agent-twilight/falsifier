@@ -82,13 +82,13 @@ so iteration is free. Ugly is fine here; working is the only requirement.
   *Done when:* a typed claim prints 3–5 sub-claims that are genuinely what it rests on.
 - [x] ~~**15. Generate falsification hypotheses per sub-claim**~~ (Nano, ~50).
   *Done when:* they are ways the sub-claim could be *false*, not restatements of it.
-- [ ] **16. Generate search angles per hypothesis** (Nano).
+- [x] ~~**16. Generate search angles per hypothesis**~~ (Nano).
   *Done when:* the queries would surface disconfirming evidence, not the original claim.
-- [ ] **17. Retrieve for each angle** (Tavily).
+- [x] ~~**17. Retrieve for each angle**~~ (Tavily).
   *Done when:* results come back for every angle and are stored against their hypothesis.
-- [ ] **18. Triage each result** (Nano, ~400). Does this bear on the hypothesis?
+- [x] ~~**18. Triage each result**~~ (Nano, ~400). Does this bear on the hypothesis?
   *Done when:* survivors are a small fraction of results and the rejects look right on inspection.
-- [ ] **19. Read survivors, grade the source, extract the exact line** (Super).
+- [x] ~~**19. Read survivors, grade the source, extract the exact line**~~ (Super).
   *Done when:* each survivor has a quoted line, a live link, a source tier and a date or undated flag.
 - [ ] **20. Enforce rule 1 in code.** No quoted line and live link, no objection.
   *Done when:* a fabricated objection with an empty evidence field is dropped automatically, proven by a test.

@@ -115,10 +115,14 @@ NO_THINK_SYSTEM_PROMPT = "/no_think"
 TRIAGE_OUTPUT_TOKENS_THINKING = 190
 TRIAGE_OUTPUT_TOKENS_NO_THINK = 108
 
-# Default to full reasoning. /no_think was only ever a cost saving, and cost
-# is no longer the binding constraint; quality is. Flip this only if the
-# triage eval shows /no_think is as accurate.
-TRIAGE_USE_NO_THINK = False
+# Triage is a one-word YES/NO relevance decision. Full reasoning on it is
+# not higher quality, it is 3,400 characters of deliberation that overran
+# the token budget and returned nothing (seen 18 Oct). /no_think gave
+# identical answers when measured. Deeper stages keep full reasoning.
+TRIAGE_USE_NO_THINK = True
+
+# Headroom above MAX_TOKENS_FLOOR for the stages that genuinely think.
+TRIAGE_MAX_TOKENS = 1_200
 
 
 def missing_credentials() -> list[str]:

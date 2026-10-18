@@ -80,3 +80,27 @@ def as_list_of_strings(value: Any, key: str | None = None) -> list[str]:
         if text:
             out.append(text)
     return out
+
+
+def complete_json(tier, prompt: str, *, stage: str, max_tokens: int,
+                  retry: bool = True, **kwargs) -> Any:
+    """Call a model and parse JSON from the reply, retrying once if cut off.
+
+    Models quoting a long passage can run out of room mid-structure, leaving
+    unparseable JSON. One retry with double the budget fixes it; failing
+    twice is a real error worth surfacing.
+    """
+    from falsifier.clients import nebius
+
+    result = nebius.complete(
+        tier, prompt, stage=stage, max_tokens=max_tokens, **kwargs
+    )
+    try:
+        return extract_json(result.text)
+    except ParseError:
+        if not (retry and result.truncated):
+            raise
+        return complete_json(
+            tier, prompt, stage=stage, max_tokens=max_tokens * 2,
+            retry=False, **kwargs
+        )

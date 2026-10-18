@@ -43,12 +43,18 @@ Generate exactly one hypothesis for each of these angles:
 9. SELECTION - the evidence for it comes from an unrepresentative group
 10. AUTHORITY - the body that actually decides says otherwise
 
-CRITICAL RULE: do not invent documents. Never name a specific report, PDF, memo, webpage or date unless it was given to you above, and never invent a quotation. You do not know what documents exist - that is what the search step is for. State the fact about the world, not a fabricated citation.
+TWO CRITICAL RULES.
+
+RULE 1 - do not invent documents. Never name a specific report, PDF, memo, webpage, policy or date unless it was given to you above, and never invent a quotation. You do not know what documents exist; the search step finds that out. State the fact about the world, not a fabricated citation.
+
+RULE 2 - do not invent numbers. Never state a specific statistic, percentage, count or weighting. You have not looked anything up, so any figure you produce is fiction, and a fabricated figure sends the search hunting for something that may not exist. Describe the SHAPE of the fact and let the search find the real value.
 
 Bad:  "The 2022 policy memo 'Evaluation of Applicants' states work experience is not a factor."
-      (invented document, invented title, invented quote)
-Good: "The programme's own published admissions criteria do not list work experience as a factor."
-      (same idea, no fabrication, and searchable)
+      (invented document, title and quote - breaks rule 1)
+Bad:  "Fewer than 3% of admitted students had prior full-time work experience."
+      (invented statistic - breaks rule 2)
+Good: "The share of admitted students with prior full-time work experience is much lower than assumed."
+      (same attack, no fabrication, and the search can find the real number)
 
 Bad:  "Work experience may not be valuable."
       (vague, unsearchable, just the assumption negated)
@@ -68,7 +74,7 @@ def hypothesise(
     conn: sqlite3.Connection | None = None,
 ) -> list[str]:
     """Return concrete ways `sub_claim` could be false."""
-    result = nebius.complete(
+    payload = parsing.complete_json(
         config.NANO,
         PROMPT.format(claim=claim, sub_claim=sub_claim, count=count),
         stage="hypothesise",
@@ -76,9 +82,7 @@ def hypothesise(
         run_id=run_id,
         conn=conn,
     )
-    hypotheses = parsing.as_list_of_strings(
-        parsing.extract_json(result.text), key="hypothesis"
-    )
+    hypotheses = parsing.as_list_of_strings(payload, key="hypothesis")
 
     if sub_claim_id is not None and conn is not None:
         conn.executemany(

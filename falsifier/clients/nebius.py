@@ -56,6 +56,7 @@ class Completion:
     latency_ms: int
     cost_usd: float
     call_id: int
+    truncated: bool = False
 
 
 def client() -> OpenAI:
@@ -163,6 +164,7 @@ def complete(
     temperature: float = 0.0,
     run_id: int | None = None,
     conn: sqlite3.Connection | None = None,
+    retry_on_overrun: bool = True,
 ) -> Completion:
     """Send one prompt to one tier, log it, and return the answer.
 
@@ -231,12 +233,23 @@ def complete(
     )
 
     if not text:
+        finish_reason = response.choices[0].finish_reason
         row["ok"] = 0
         row["error"] = (
-            f"empty content, finish_reason={response.choices[0].finish_reason}, "
+            f"empty content, finish_reason={finish_reason}, "
             f"{len(reasoning)} chars of reasoning, max_tokens={max_tokens}"
         )
         _log(conn, **row)
+
+        # Ran out of room mid-thought rather than genuinely having nothing
+        # to say. Retry once with double the budget, so one unlucky call
+        # does not abort a 490-call run.
+        if finish_reason == "length" and retry_on_overrun:
+            return complete(
+                tier, prompt, stage=stage, system=system, no_think=no_think,
+                max_tokens=max_tokens * 2, temperature=temperature,
+                run_id=run_id, conn=conn, retry_on_overrun=False,
+            )
         raise EmptyCompletion(row["error"])
 
     call_id = _log(conn, **row)
@@ -250,6 +263,7 @@ def complete(
         latency_ms=latency_ms,
         cost_usd=row["cost_usd"],
         call_id=call_id,
+        truncated=response.choices[0].finish_reason == "length",
     )
 
 
