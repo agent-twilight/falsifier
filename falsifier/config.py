@@ -75,6 +75,18 @@ TAVILY_RATE_LIMIT_PER_MIN = 100
 # advanced depth on its own, silently doubling the credit cost.
 TAVILY_SEARCH_DEPTH = "basic"
 
+# Two different watching jobs, on two different schedules (decided 18 Oct).
+#
+# RE-VERIFY: does our cited quote still exist on the page it came from?
+# Free - a conditional request returns 304 with no body. Runs daily.
+#
+# RE-SEARCH: has something appeared that did not exist when we looked?
+# Costs Tavily credits, so it cannot run daily against a 1000/month budget.
+# Weekly, live claims only, with a hard per-week credit ceiling.
+RESEARCH_INTERVAL_DAYS = 7
+RESEARCH_MAX_CREDITS_PER_WEEK = 60
+RESEARCH_QUERIES_PER_CLAIM = 3
+
 
 # --------------------------------------------------------------------------
 # Budget ceilings, enforced by the call wrapper in step 9.
@@ -89,6 +101,15 @@ MAX_SEARCHES_PER_RUN = 45  # expected ~40
 # page content, so it is where an overflow would actually bite. Truncate
 # before the text reaches it.
 TRIAGE_MAX_CHARS = 6_000
+
+# Pipeline breadth per claim. The full profile matches the architecture the
+# submission describes; quick exists so development and demos do not eat
+# the monthly Tavily allowance.
+PROFILES = {
+    "quick": {"sub_claims": 2, "hypotheses": 3, "angles": 1, "results": 4},
+    "full": {"sub_claims": 4, "hypotheses": 10, "angles": 2, "results": 5},
+}
+DEFAULT_PROFILE = "quick"
 
 
 # --------------------------------------------------------------------------

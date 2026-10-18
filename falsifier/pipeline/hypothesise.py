@@ -25,23 +25,30 @@ from falsifier import config
 from falsifier.clients import nebius
 from falsifier.pipeline import parsing
 
+ANGLES = [
+    ("AUTHORITY", "the body that actually decides says otherwise"),
+    ("NUMBERS", "the actual figures contradict it"),
+    ("APPLICABILITY", "true in general, but not for this specific case"),
+    ("TIMING", "it was true once but has changed, or has not taken effect yet"),
+    ("DEFINITION", "a key term means something narrower or different"),
+    ("CONFOUND", "something else explains the same observation"),
+    ("MAGNITUDE", "real but too small to matter"),
+    ("SOURCE", "the belief traces to a party with an interest in it"),
+    ("SELECTION", "the evidence comes from an unrepresentative group"),
+    ("TRADE-OFF", "true, but it costs more than it gains"),
+]
+
 PROMPT = """You are trying to prove an assumption WRONG. Not to argue about it, and not to hedge it: to name the specific states of the world that, if true, would demolish it.
 
 Overall claim: "{claim}"
 Assumption under attack: "{sub_claim}"
 
-Generate exactly one hypothesis for each of these angles:
+Generate exactly one hypothesis for each of these angles, and no others:
 
-1. NUMBERS - the actual figures contradict it
-2. DEFINITION - a key term means something narrower or different
-3. TIMING - it was true once but has changed, or has not taken effect yet
-4. APPLICABILITY - true in general, but not for this specific case
-5. SOURCE - the belief traces to a party with an interest in it
-6. MAGNITUDE - real but too small to matter
-7. CONFOUND - something else explains the same observation
-8. TRADE-OFF - true, but it costs more than it gains
-9. SELECTION - the evidence for it comes from an unrepresentative group
-10. AUTHORITY - the body that actually decides says otherwise
+{angle_list}
+
+Give exactly {count} hypotheses - one per angle listed above. Do not add
+extras.
 
 TWO CRITICAL RULES.
 
@@ -74,15 +81,23 @@ def hypothesise(
     conn: sqlite3.Connection | None = None,
 ) -> list[str]:
     """Return concrete ways `sub_claim` could be false."""
+    chosen = ANGLES[:count]
     payload = parsing.complete_json(
         config.NANO,
-        PROMPT.format(claim=claim, sub_claim=sub_claim, count=count),
+        PROMPT.format(
+            claim=claim,
+            sub_claim=sub_claim,
+            count=len(chosen),
+            angle_list="\n".join(
+                f"{i}. {name} - {desc}" for i, (name, desc) in enumerate(chosen, 1)
+            ),
+        ),
         stage="hypothesise",
         max_tokens=3000,
         run_id=run_id,
         conn=conn,
     )
-    hypotheses = parsing.as_list_of_strings(payload, key="hypothesis")
+    hypotheses = parsing.as_list_of_strings(payload, key="hypothesis")[:count]
 
     if sub_claim_id is not None and conn is not None:
         conn.executemany(
