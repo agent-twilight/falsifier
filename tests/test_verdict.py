@@ -175,3 +175,21 @@ def test_a_primary_source_keeps_full_confidence(monkeypatch):
     v = verdict.judge("c", "s", _evidence("primary", "https://stanford.edu/x"))
     assert v.stance == verdict.SUPPORTED
     assert v.confidence == 0.95
+
+
+def test_criteria_are_put_to_the_model_as_all_or_nothing(monkeypatch):
+    """A near-miss on wording must not pass as a counter-example."""
+    seen = {}
+
+    def spy(tier, prompt, **kwargs):
+        seen["prompt"] = prompt
+        return {"verdict": "UNVERIFIABLE", "statement": "x", "reason": "y"}
+
+    monkeypatch.setattr(parsing, "complete_json", spy)
+    verdict.judge("c", "s", [], criteria=[
+        "monitors sources outside the user's control",
+        "alerts without being asked",
+    ])
+    assert "MUST SATISFY EVERY ONE" in seen["prompt"]
+    assert "outside the user's control" in seen["prompt"]
+    assert "adjacent" in seen["prompt"]

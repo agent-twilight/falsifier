@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS claims (
                 CHECK (mode IN ('personal', 'demo')),
     status      TEXT NOT NULL DEFAULT 'live'
                 CHECK (status IN ('live', 'retracted', 'superseded')),
+    -- What a counter-example must satisfy, one per line. Set by the user,
+    -- because only they can say what would actually change their mind.
+    criteria    TEXT,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

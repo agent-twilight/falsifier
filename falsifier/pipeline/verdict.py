@@ -51,6 +51,8 @@ the URL given):
 
 {ambiguity_note}
 
+{criteria_note}
+
 Decide between exactly three verdicts.
 
 CHALLENGES - the evidence genuinely undermines the assumption. Only choose \
@@ -157,6 +159,7 @@ def judge(
     evidence: list[read.Evidence],
     *,
     ambiguities: list[str] | None = None,
+    criteria: list[str] | None = None,
     run_id: int | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> Verdict:
@@ -170,6 +173,17 @@ def judge(
             "you must say which detail is needed."
         )
 
+    criteria_note = ""
+    if criteria:
+        criteria_note = (
+            "A COUNTER-EXAMPLE MUST SATISFY EVERY ONE OF THESE. Meeting some "
+            "but not all makes it adjacent, which is not a counter-example:\n"
+            + "\n".join(f"- {c}" for c in criteria)
+            + "\nBefore choosing CHALLENGES, check the quoted evidence "
+            "against each criterion in turn and say which ones it meets. If "
+            "any is unmet, the verdict is not CHALLENGES."
+        )
+
     payload = parsing.complete_json(
         config.ULTRA,
         PROMPT.format(
@@ -177,6 +191,7 @@ def judge(
             sub_claim=sub_claim,
             evidence=_format_evidence(evidence),
             ambiguity_note=note,
+            criteria_note=criteria_note,
         ),
         stage="survive",
         max_tokens=3000,

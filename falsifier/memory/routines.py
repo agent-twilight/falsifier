@@ -49,8 +49,8 @@ EXISTENCE = Routine(
     angles=[
         ("DIRECT_COMPETITOR", "a product doing exactly this already ships"),
         ("ADJACENT_CATEGORY", "it exists under a name the claimant does not use"),
-        ("PARTIAL_OVERLAP", "two existing products together cover the gap"),
         ("INCUMBENT_FEATURE", "a large existing product shipped this as a feature"),
+        ("PARTIAL_OVERLAP", "two existing products together cover the gap"),
         ("PRIOR_ART", "a paper, patent or open-source project did it first"),
         ("FAILED_ATTEMPT", "somebody built it and it died, which is worse news"),
         ("TERMINOLOGY", "the field calls this something else entirely"),
@@ -67,7 +67,18 @@ EXISTENCE = Routine(
         "like app, tool, platform, alternative, vs, competitors, pricing, "
         "changelog. Never use site:gov, never search for definitions or "
         "glossaries, and never search for the absence of a thing - search "
-        "for the thing."
+        "for the thing. "
+        "When the claim is about a tool that watches the world on the "
+        "user's behalf, keep the inward/outward distinction sharp. INWARD "
+        "is the user's own input played back to them: reminders, to-do "
+        "lists, calendar alerts, habit streaks, deadline nudges. Every "
+        "reminder app does this and NONE of it is relevant. OUTWARD is "
+        "information arriving from outside the user's control that changes "
+        "what they should do: a rule changed, a date moved, a competitor "
+        "launched. Search only for outward. Use words like monitors, "
+        "tracks changes, watches for updates, alerts when something "
+        "changes, news monitoring, change detection - not reminder, "
+        "to-do, scheduler, planner or task."
     ),
 )
 

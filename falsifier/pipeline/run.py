@@ -92,6 +92,7 @@ def investigate(
     *,
     profile: str = config.DEFAULT_PROFILE,
     mode: str = "personal",
+    criteria: list[str] | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> RunResult:
     """Run one claim all the way through, and never crash on one bad stage."""
@@ -105,7 +106,8 @@ def investigate(
 
     try:
         claim_id = connection.execute(
-            "INSERT INTO claims (text, mode) VALUES (?, ?)", (claim, mode)
+            "INSERT INTO claims (text, mode, criteria) VALUES (?, ?, ?)",
+            (claim, mode, "\n".join(criteria) if criteria else None),
         ).lastrowid
         run_id = connection.execute(
             "INSERT INTO runs (claim_id, mode) VALUES (?, ?)", (claim_id, mode)
@@ -200,7 +202,7 @@ def investigate(
             try:
                 judgement = verdict.judge(
                     claim, sub_text, [e for e, _ in evidence_for_sub],
-                    ambiguities=decomposition.ambiguities,
+                    ambiguities=decomposition.ambiguities, criteria=criteria,
                     run_id=run_id, conn=connection,
                 )
             except (parsing.ParseError, nebius.ModelCallError) as exc:
