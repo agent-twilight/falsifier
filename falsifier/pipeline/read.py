@@ -86,7 +86,8 @@ class Evidence:
         return not self.published_date
 
 
-def grade_source(url: str, authority_domains: set[str] | None = None) -> str:
+def grade_source(url: str, authority_domains: set[str] | None = None,
+                 weak_hints: set[str] | None = None) -> str:
     """primary, secondary or weak.
 
     Deliberately mechanical. Asking a model to grade its own sources invites
@@ -100,6 +101,7 @@ def grade_source(url: str, authority_domains: set[str] | None = None) -> str:
     """
     host = (urlparse(url).hostname or "").lower()
     bare = host[4:] if host.startswith("www.") else host
+    markers = set(WEAK_MARKERS) | (weak_hints or set())
 
     if authority_domains:
         for domain in authority_domains:
@@ -107,11 +109,11 @@ def grade_source(url: str, authority_domains: set[str] | None = None) -> str:
                 return "primary"
         # An authority was identified and this is not it, so it is at best
         # a report of what the authority said.
-        if any(marker in url.lower() for marker in WEAK_MARKERS):
+        if any(marker in url.lower() for marker in markers):
             return "weak"
         return "secondary"
 
-    if any(marker in url.lower() for marker in WEAK_MARKERS):
+    if any(marker in url.lower() for marker in markers):
         return "weak"
     if host.endswith(PRIMARY_SUFFIXES):
         return "primary"
@@ -167,6 +169,7 @@ def read(
     published_date: str | None = None,
     *,
     authority_domains: set[str] | None = None,
+    weak_hints: set[str] | None = None,
     run_id: int | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> Evidence | None:
@@ -203,7 +206,7 @@ def read(
         quote=quote,
         url=url,
         title=title,
-        source_tier=grade_source(url, authority_domains),
+        source_tier=grade_source(url, authority_domains, weak_hints),
         bearing=str(payload.get("bearing", "UNCLEAR")).upper(),
         published_date=published_date,
     )

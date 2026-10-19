@@ -173,6 +173,24 @@ CREATE TABLE IF NOT EXISTS calls (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Falsification routines: how to attack a *class* of claim. Three are
+-- built in; the rest are written by the agent when it meets a domain it
+-- has no routine for, and reused from then on. Data, not code, so a new
+-- domain costs a row rather than a deploy.
+CREATE TABLE IF NOT EXISTS routines (
+    name                TEXT PRIMARY KEY,
+    description         TEXT NOT NULL,
+    applies_when        TEXT NOT NULL,
+    angles              TEXT NOT NULL,   -- JSON [[name, description], ...]
+    primary_sources     TEXT NOT NULL,
+    weak_sources        TEXT NOT NULL DEFAULT '',
+    decompose_guidance  TEXT NOT NULL DEFAULT '',
+    query_guidance      TEXT NOT NULL,
+    generated           INTEGER NOT NULL DEFAULT 0,
+    times_used          INTEGER NOT NULL DEFAULT 0,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Who decides, per claim. Grading uses it, and the monitoring loop
 -- re-checks these pages rather than searching fresh every week.
 CREATE TABLE IF NOT EXISTS claim_authorities (
@@ -205,7 +223,7 @@ CREATE INDEX IF NOT EXISTS idx_searches_query ON searches(query);
 TABLES = (
     "claims", "runs", "sub_claims", "hypotheses", "searches",
     "results", "evidence", "findings", "calls", "sources",
-    "claim_authorities",
+    "claim_authorities", "routines",
 )
 
 

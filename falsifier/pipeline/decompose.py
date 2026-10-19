@@ -51,7 +51,9 @@ Claim: "{claim}"
 {criteria_block}
 FIRST, check whether the claim is specific enough to be checked against evidence at all. A claim that names no particular programme, body, place or time period usually cannot be falsified, because the answer differs between cases. List anything genuinely missing that a researcher would have to know before they could look this up. If criteria were supplied above, those terms are already settled - do NOT ask for them again. If nothing is missing, give an empty list.
 
-SECOND, identify the load-bearing assumptions. Each must be:
+SECOND, identify the load-bearing assumptions.
+{decompose_guidance}
+Each must be:
 - checkable against public documentary evidence
 - specific enough that evidence would settle it
 - genuinely load-bearing, not a restatement of the whole claim
@@ -95,14 +97,15 @@ def decompose(
             "must satisfy ALL of these:\n"
             + "\n".join(f"- {c}" for c in criteria) + "\n"
         )
-    template = (
-        EXISTENCE_PROMPT
-        if routine is not None and routine.name == "existence"
-        else PROMPT
-    )
+    use_existence = routine is not None and routine.name == "existence"
+    template = EXISTENCE_PROMPT if use_existence else PROMPT
+    fields = {"claim": claim, "criteria_block": criteria_block}
+    if not use_existence:
+        guidance = routine.decompose_guidance if routine else ""
+        fields["decompose_guidance"] = (guidance + "\n") if guidance else ""
     payload = parsing.complete_json(
         config.SUPER,
-        template.format(claim=claim, criteria_block=criteria_block),
+        template.format(**fields),
         stage="decompose",
         max_tokens=2500,
         run_id=run_id,

@@ -130,6 +130,11 @@ def investigate(
             failures.append(f"identifying authorities: {exc}")
             found_authorities = []
         authority_domains = authority.domains(found_authorities)
+        weak_hints = {
+            word.strip().lower()
+            for word in (routine.weak_sources or "").replace(",", " ").split()
+            if len(word.strip()) > 4
+        }
         decomposition = decompose.decompose(
             claim, routine=routine, criteria=criteria,
             claim_id=claim_id, run_id=run_id, conn=connection,
@@ -202,6 +207,7 @@ def investigate(
                                 hyp_text, result.url, result.title,
                                 result.snippet, result.published_date,
                                 authority_domains=authority_domains,
+                                weak_hints=weak_hints,
                                 run_id=run_id, conn=connection,
                             )
                         except (parsing.ParseError, nebius.ModelCallError) as exc:

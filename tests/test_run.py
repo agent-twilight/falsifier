@@ -14,8 +14,9 @@ import pytest
 from falsifier import artifact, config
 from falsifier.clients import nebius, tavily
 from falsifier.memory import db
+from falsifier.memory import routines
 from falsifier.pipeline import (
-    angles, decompose, hypothesise, parsing, read, run, verdict,
+    angles, authority, decompose, hypothesise, parsing, read, run, verdict,
 )
 
 EVIDENCE = read.Evidence(
@@ -33,6 +34,13 @@ def wired(tmp_path, monkeypatch):
     """A working pipeline with every external edge stubbed out."""
     monkeypatch.setattr(config, "FIXTURES_DIR", tmp_path / "fx")
     conn = db.init_db(tmp_path / "t.db")
+
+    # Stub the stages that reach the network. Without these the suite made
+    # live API calls: real money, and a test run that needs the internet.
+    monkeypatch.setattr(routines, "classify", lambda c, **kw: routines.REQUIREMENT)
+    monkeypatch.setattr(authority, "identify", lambda c, **kw: [
+        authority.Authority("Stanford", "stanford.edu", "sets its own rules", True)
+    ])
 
     monkeypatch.setattr(decompose, "decompose", lambda claim, **kw: _decomp(conn, kw))
     monkeypatch.setattr(hypothesise, "hypothesise", lambda c, s, **kw: _hyps(conn, kw))
