@@ -69,6 +69,18 @@ Every claim ends in one of three states, and all three are cited:
 
 An agent that always finds fault is as broken as one that always agrees.
 
+**Deadlines are context, not output** (user, 19 Oct). The agent needs to
+know the exam is in 100 days in order to judge whether a date change
+matters. It must never send that back as a notification. What reaches the
+user is only outward-facing: information from outside their control that
+changes what they should do. Their own plan read back to them is what every
+reminder app already does, and is not this product.
+
+**Users will not name their sources.** Someone says "I'm preparing for JEE
+in April". Working out that NTA is authoritative, that coaching blogs are
+secondary and that forums are noise is the agent's job. See
+`pipeline/authority.py`.
+
 Two track requirements are deliberate build items, not side effects of the
 pipeline — **reusable skills** (falsification routines per class of claim) and
 **tasks not answers** (counter-case artifact, draft extraction, retraction).

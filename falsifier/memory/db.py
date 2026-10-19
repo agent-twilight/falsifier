@@ -173,6 +173,17 @@ CREATE TABLE IF NOT EXISTS calls (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Who decides, per claim. Grading uses it, and the monitoring loop
+-- re-checks these pages rather than searching fresh every week.
+CREATE TABLE IF NOT EXISTS claim_authorities (
+    claim_id    INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    domain      TEXT,
+    why         TEXT,
+    reachable   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (claim_id, name)
+);
+
 -- Which domains have proved worth trusting.
 CREATE TABLE IF NOT EXISTS sources (
     domain      TEXT PRIMARY KEY,
@@ -194,6 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_searches_query ON searches(query);
 TABLES = (
     "claims", "runs", "sub_claims", "hypotheses", "searches",
     "results", "evidence", "findings", "calls", "sources",
+    "claim_authorities",
 )
 
 

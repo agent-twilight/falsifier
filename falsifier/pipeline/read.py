@@ -86,13 +86,31 @@ class Evidence:
         return not self.published_date
 
 
-def grade_source(url: str) -> str:
-    """primary, secondary or weak, from the domain alone.
+def grade_source(url: str, authority_domains: set[str] | None = None) -> str:
+    """primary, secondary or weak.
 
     Deliberately mechanical. Asking a model to grade its own sources invites
     it to flatter whatever it happened to find.
+
+    `authority_domains` is the decisive part. The suffix rule alone gets
+    cases like jeemain.nta.nic.in wrong - the actual exam board, graded the
+    same as a news site because it does not end in .gov. When the bodies
+    who decide this claim have been identified, their own pages are primary
+    whatever the suffix, and nothing else can be.
     """
     host = (urlparse(url).hostname or "").lower()
+    bare = host[4:] if host.startswith("www.") else host
+
+    if authority_domains:
+        for domain in authority_domains:
+            if bare == domain or bare.endswith("." + domain):
+                return "primary"
+        # An authority was identified and this is not it, so it is at best
+        # a report of what the authority said.
+        if any(marker in url.lower() for marker in WEAK_MARKERS):
+            return "weak"
+        return "secondary"
+
     if any(marker in url.lower() for marker in WEAK_MARKERS):
         return "weak"
     if host.endswith(PRIMARY_SUFFIXES):
@@ -148,6 +166,7 @@ def read(
     snippet: str,
     published_date: str | None = None,
     *,
+    authority_domains: set[str] | None = None,
     run_id: int | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> Evidence | None:
@@ -184,7 +203,7 @@ def read(
         quote=quote,
         url=url,
         title=title,
-        source_tier=grade_source(url),
+        source_tier=grade_source(url, authority_domains),
         bearing=str(payload.get("bearing", "UNCLEAR")).upper(),
         published_date=published_date,
     )

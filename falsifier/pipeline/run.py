@@ -23,7 +23,8 @@ from falsifier import config
 from falsifier.clients import nebius, tavily
 from falsifier.memory import db, routines
 from falsifier.pipeline import (
-    angles, decompose, freshness, hypothesise, parsing, read, verdict,
+    angles, authority, decompose, freshness, hypothesise, parsing, read,
+    verdict,
 )
 
 
@@ -63,6 +64,7 @@ class RunResult:
     credits: int = 0
     failures: list[str] = field(default_factory=list)
     routine: str = ""
+    authorities: list = field(default_factory=list)
 
 
 def _store_evidence(
@@ -115,6 +117,19 @@ def investigate(
         connection.commit()
 
         routine = routines.classify(claim, run_id=run_id, conn=connection)
+
+        # Work out who decides this before searching, so retrieved pages can
+        # be graded by who published them rather than by URL suffix - and so
+        # the monitoring loop has stable pages to re-check.
+        try:
+            found_authorities = authority.identify(
+                claim, run_id=run_id, conn=connection
+            )
+            authority.store(connection, claim_id, found_authorities)
+        except (parsing.ParseError, nebius.ModelCallError) as exc:
+            failures.append(f"identifying authorities: {exc}")
+            found_authorities = []
+        authority_domains = authority.domains(found_authorities)
         decomposition = decompose.decompose(
             claim, routine=routine, criteria=criteria,
             claim_id=claim_id, run_id=run_id, conn=connection,
@@ -186,6 +201,7 @@ def investigate(
                             ev = read.read(
                                 hyp_text, result.url, result.title,
                                 result.snippet, result.published_date,
+                                authority_domains=authority_domains,
                                 run_id=run_id, conn=connection,
                             )
                         except (parsing.ParseError, nebius.ModelCallError) as exc:
@@ -248,7 +264,7 @@ def investigate(
                 ambiguities=decomposition.ambiguities,
             ),
             funnel=funnel, cost_usd=cost, credits=credits, failures=failures,
-            routine=routine.name,
+            routine=routine.name, authorities=found_authorities,
         )
     finally:
         if owned:
