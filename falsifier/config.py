@@ -84,6 +84,7 @@ TAVILY_SEARCH_DEPTH = "basic"
 # Costs Tavily credits, so it cannot run daily against a 1000/month budget.
 # Weekly, live claims only, with a hard per-week credit ceiling.
 RESEARCH_INTERVAL_DAYS = 7
+RESEARCH_WEEKDAY = 0  # Monday
 RESEARCH_MAX_CREDITS_PER_WEEK = 60
 RESEARCH_QUERIES_PER_CLAIM = 3
 

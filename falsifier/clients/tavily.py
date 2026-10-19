@@ -134,6 +134,7 @@ def search(
     max_results: int = 5,
     conn: sqlite3.Connection | None = None,
     store_results: bool = True,
+    force_fresh: bool = False,
 ) -> Search:
     """Run one query, preferring a recorded fixture over the network.
 
@@ -147,7 +148,7 @@ def search(
 
     try:
         started = time.monotonic()
-        if path.exists():
+        if path.exists() and not force_fresh:
             payload = json.loads(path.read_text(encoding="utf-8"))
             credits, from_cache = 0, True
         elif offline():

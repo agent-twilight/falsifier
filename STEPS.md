@@ -116,16 +116,16 @@ so iteration is free. Ugly is fine here; working is the only requirement.
 Brought forward deliberately. Always-on is a hard track requirement, and the
 logs only exist for the days the loop has actually been running.
 
-- [ ] **28. Re-verification schedule per objection**, set by how fast that kind
+- [x] ~~**28. Re-verification schedule per objection**~~, set by how fast that kind
   of fact moves.
   *Done when:* objections carry a next-check date and the due ones can be listed.
-- [ ] **29. Retraction.** When an objection stops holding, mark it retracted
+- [x] ~~**29. Retraction.**~~ When an objection stops holding, mark it retracted
   with the date and reason, preserving history.
   *Done when:* a forced re-check flips one objection to retracted.
-- [ ] **30. Daily loop.** Wakes, re-checks what is due, stays silent unless
+- [x] ~~**30. Daily loop.**~~ Wakes, re-checks what is due, stays silent unless
   something changed.
   *Done when:* it runs three consecutive days and says nothing on a day with no change.
-- [ ] **31. Telegram notification on change.** Chosen over email: no SMTP or
+- [x] ~~**31. Telegram notification on change.**~~ Chosen over email: no SMTP or
   app password, and a phone notification arriving unprompted reads far better
   on video than an inbox screenshot.
   *Done when:* a real retraction reaches your phone, with the claim and the reason.
