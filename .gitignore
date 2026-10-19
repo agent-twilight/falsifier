@@ -27,10 +27,18 @@ venv/
 # Your personal data. Never committed, not even to a private repo.
 # The claim register is the densest description of you that exists.
 # ---------------------------------------------------------------
-data/
+# Everything under data/ is personal and stays here. A negation cannot
+# rescue a file from an excluded *directory*, so this excludes the
+# contents rather than the folder itself.
+data/*
 logs/
 *.db
 *.sqlite3
+
+# The one exception: the demo database ships inside the public image. It
+# is built by scripts/build_demo_db.py and contains only mode='demo'
+# rows, which that script verifies before writing.
+!data/demo.db
 
 # ---------------------------------------------------------------
 # OS and editor junk
