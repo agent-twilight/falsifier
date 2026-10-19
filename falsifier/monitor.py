@@ -106,6 +106,8 @@ def compose(changes: list[Change]) -> str:
     Never their own plan read back at them: a deadline approaching is
     something every reminder app already does, and is not this product.
     """
+    if not changes:
+        return ""
     if len(changes) == 1:
         change = changes[0]
         return (
@@ -341,7 +343,7 @@ def run_once(
             result.errors.extend(weekly.errors)
             result.credits_spent += weekly.credits_spent
 
-        if notify and result.changes:
+        if notify and result.changes:  # silence is the default outcome
             send(compose(result.changes))
         return result
     finally:

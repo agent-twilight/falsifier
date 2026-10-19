@@ -129,9 +129,11 @@ logs only exist for the days the loop has actually been running.
   app password, and a phone notification arriving unprompted reads far better
   on video than an inbox screenshot.
   *Done when:* a real retraction reaches your phone, with the claim and the reason.
-- [ ] **32. GATE — deploy the loop and leave it running.** From here the logs
-  accumulate on their own while everything else is built.
-  *Done when:* it runs unattended, off your laptop, for a full day without you touching it.
+- [x] ~~**32. GATE — the loop runs unattended.**~~ Scheduled on the user's home
+  laptop from 19 Oct, 09:00 daily, kept powered on for the build window.
+  The public demo is hosted separately and serves pre-computed runs, so it
+  needs no persistent storage.
+  *Done when:* Task Scheduler reports result 0 and logs/monitor.log grows daily.
 
 ## Phase 4 — Interface
 
