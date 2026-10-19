@@ -21,3 +21,4 @@ python-dotenv
 
 # Tests
 pytest
+python-multipart

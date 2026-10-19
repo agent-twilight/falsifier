@@ -28,6 +28,22 @@ from falsifier.pipeline import (
 )
 
 
+def _publish(conn: sqlite3.Connection, run_id: int, funnel: "Funnel",
+             stage: str) -> None:
+    """Write the funnel so far, so the page can show it filling in.
+
+    The run takes one to three minutes. Watching the numbers climb is more
+    honest than a spinner and happens to be the best thing on camera.
+    """
+    conn.execute(
+        "UPDATE runs SET n_hypotheses = ?, n_searches = ?, n_results = ?, "
+        "n_read = ?, n_survived = ?, stage = ? WHERE id = ?",
+        (funnel.hypotheses, funnel.searches, funnel.results,
+         funnel.quotes_verified, funnel.challenged, stage, run_id),
+    )
+    conn.commit()
+
+
 @dataclass
 class Funnel:
     """What went in, what survived. The rejection log, as numbers."""
@@ -166,6 +182,7 @@ def investigate(
                 (sub_id, len(hypotheses)),
             ).fetchall()
             funnel.hypotheses += len(hyp_rows)
+            _publish(connection, run_id, funnel, "inventing ways it could be wrong")
 
             for hyp_row in hyp_rows:
                 hyp_id, hyp_text = hyp_row["id"], hyp_row["text"]
@@ -194,6 +211,7 @@ def investigate(
 
                     funnel.searches += 1
                     funnel.results += len(found.results)
+                    _publish(connection, run_id, funnel, "searching")
 
                     for result in found.results:
                         try:
@@ -218,6 +236,7 @@ def investigate(
                             funnel.quotes_rejected += 1
                             continue
                         funnel.quotes_verified += 1
+                        _publish(connection, run_id, funnel, "reading sources")
                         evidence_for_sub.append(
                             (ev, _store_evidence(connection, hyp_id, ev))
                         )
@@ -238,6 +257,7 @@ def investigate(
                 )
 
             verdicts.append(judgement)
+            _publish(connection, run_id, funnel, "weighing the evidence")
             _store_finding(
                 connection, claim_id, sub_id, judgement, evidence_for_sub
             )

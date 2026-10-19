@@ -107,6 +107,9 @@ TRIAGE_MAX_CHARS = 6_000
 # submission describes; quick exists so development and demos do not eat
 # the monthly Tavily allowance.
 PROFILES = {
+    # For a stranger on the public demo, who will not wait three minutes.
+    # One assumption, attacked four ways. Around a minute.
+    "demo": {"sub_claims": 1, "hypotheses": 4, "angles": 1, "results": 4},
     "quick": {"sub_claims": 2, "hypotheses": 3, "angles": 1, "results": 4},
     "standard": {"sub_claims": 3, "hypotheses": 5, "angles": 1, "results": 4},
     "full": {"sub_claims": 4, "hypotheses": 10, "angles": 2, "results": 5},

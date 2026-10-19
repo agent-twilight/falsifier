@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS runs (
     status          TEXT NOT NULL DEFAULT 'running'
                     CHECK (status IN ('running', 'complete', 'failed',
                                       'halted_budget')),
+    -- What it is doing right now, for the live progress view.
+    stage           TEXT,
     -- the funnel, which is also the rejection log and the video's best shot
     n_hypotheses    INTEGER NOT NULL DEFAULT 0,
     n_searches      INTEGER NOT NULL DEFAULT 0,

@@ -15,6 +15,14 @@ from falsifier.memory import db
 from web import main
 
 
+def visible(html: str) -> str:
+    """Just the words a reader sees. Styles and scripts are not copy."""
+    import re
+    html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.S)
+    html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.S)
+    return re.sub(r"<[^>]+>", " ", html)
+
+
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     conn = db.init_db(tmp_path / "t.db")
@@ -118,7 +126,7 @@ def test_demo_mode_cannot_open_a_personal_claim_by_id(client, monkeypatch):
 
 def test_demo_mode_says_it_is_a_demo(client, monkeypatch):
     monkeypatch.setenv("FALSIFIER_DEMO", "1")
-    assert "no personal data" in client.get("/").text
+    assert "Nothing personal is shown or kept" in client.get("/").text
 
 
 def test_health_reports_the_mode(client, monkeypatch):
@@ -139,3 +147,64 @@ def test_an_unknown_claim_is_a_clean_404(client):
 def test_the_numbers_page_renders(client):
     body = client.get("/numbers").text
     assert "measured" in body or "planned" in body
+
+
+# ---------------------------------------------------------------------------
+# A visitor has to be able to use it, and the voice has to be right.
+# ---------------------------------------------------------------------------
+
+
+def test_a_visitor_can_enter_a_claim(client):
+    """The hard requirement: a judge must be able to run something."""
+    body = client.get("/").text
+    assert 'action="/check"' in body
+    assert "<textarea" in body
+
+
+def test_the_opening_explains_the_product_without_jargon(client):
+    body = client.get("/").text
+    assert "exam board moved the" in body, "the JEE story is the explanation"
+    assert "never tells you things you already know" in body
+
+
+def test_the_copy_is_not_adversarial(client):
+    """The method is adversarial; the stance toward the user is not."""
+    for page in ("/", "/claim/1", "/funnel/1"):
+        body = visible(client.get(page).text).lower()
+        assert "evidence that you are wrong" not in body, page
+        assert "objection" not in body, page
+        assert "falsification" not in body, page
+
+
+def test_status_words_are_plain_english(client):
+    body = visible(client.get("/").text)
+    assert "still true" in body
+    assert "unsettled" not in body
+    assert "unverifiable" not in body
+
+
+def test_a_very_short_claim_is_refused(client):
+    r = client.post("/check", data={"claim": "too short"}, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error=short" in r.headers["location"]
+
+
+def test_the_watch_page_polls_for_progress(client):
+    body = client.get("/watch?claim=something").text
+    assert "/api/progress" in body
+    assert "ways it could be wrong" in body
+
+
+def test_progress_reports_starting_for_an_unknown_claim(client):
+    assert client.get("/api/progress?claim=never+seen").json()["state"] == "starting"
+
+
+def test_progress_reports_the_funnel_as_it_fills(client, tmp_path):
+    conn = db.connect(tmp_path / "t.db")
+    conn.execute("UPDATE runs SET stage = 'searching', n_searches = 7 WHERE id = 1")
+    conn.commit()
+    conn.close()
+    data = client.get("/api/progress?claim=A degree is required").json()
+    assert data["searches"] == 7
+    assert data["stage"] == "searching"
+    assert data["claim_id"] == 1

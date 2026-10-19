@@ -29,7 +29,8 @@
     margin: 0; background: var(--bg); color: var(--ink);
     font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  .wrap { max-width: 56rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+  .wrap { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  @media (min-width: 40rem) { .wrap { padding: 2rem 1.25rem 5rem; } }
   header { border-bottom: 1px solid var(--line); margin-bottom: 2rem; }
   header .wrap { padding-bottom: 1rem; padding-top: 1.5rem; }
   h1 { font-size: 1.35rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
@@ -77,19 +78,52 @@
   .funnel-n { font-variant-numeric: tabular-nums; min-width: 3.5rem;
               text-align: right; font-weight: 600; }
   .funnel-label { color: var(--muted); font-size: .88rem; }
+  @media (max-width: 34rem) {
+    .funnel-step { flex-wrap: wrap; }
+    .funnel-bar { order: 3; flex-basis: 100%; }
+    .funnel-label { font-size: .82rem; }
+    table { font-size: .82rem; }
+    th, td { padding: .4rem .35rem; }
+    blockquote { padding: .6rem .7rem; font-size: .9rem; }
+  }
+  .hero { margin-bottom: 1.75rem; }
+  .lede { font-size: 1.12rem; line-height: 1.55; margin: 0 0 .9rem;
+          letter-spacing: -.005em; }
+  .lede-sub { color: var(--muted); font-size: .96rem; margin: 0; }
+  .ask { margin: 0 0 .8rem; }
+  .ask label { display: block; font-size: .88rem; color: var(--muted);
+               margin-bottom: .4rem; }
+  .ask textarea {
+    width: 100%; padding: .7rem .8rem; border-radius: 8px; resize: vertical;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    font: inherit; font-size: 1rem;
+  }
+  .ask-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+             margin-top: .6rem; }
+  button {
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px;
+    padding: .55rem 1.1rem; border: 1px solid var(--accent);
+    background: var(--accent); color: #fff;
+  }
+  button.link {
+    background: none; border: none; color: var(--accent); padding: 0;
+    font-weight: 400; font-size: .84rem; text-decoration: underline;
+    text-align: left;
+  }
+  .examples { margin-bottom: 2rem; line-height: 1.9; }
 </style>
 </head>
 <body>
 <header><div class="wrap">
   <h1><a href="/" style="color:inherit;text-decoration:none">The Falsifier</a></h1>
-  <p class="sub">Finds the strongest evidence that you are wrong — and says so when you are right.</p>
-  <nav><a href="/">Claims</a><a href="/numbers">Numbers</a></nav>
+  <p class="sub">Keeps your plans honest against a world that moves.</p>
+  <nav><a href="/">Check something</a><a href="/numbers">What it costs</a></nav>
 </div></header>
 <div class="wrap">
 {% if demo %}
 <div class="banner">
-  Public demo. These are pre-computed example runs; no personal data is
-  shown here, and none is stored.
+  Public demo. Nothing personal is shown or kept here. Try a claim of your
+  own — it runs for real, against live sources.
 </div>
 {% endif %}
 {% block body %}{% endblock %}

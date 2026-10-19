@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Checking…{% endblock %}
+{% block body %}
+
+<h2 id="heading">Checking this now</h2>
+<p class="meta">{{ claim }}</p>
+
+<div class="card">
+  <p class="meta" id="stage">starting…</p>
+  {% for key, label, note in [
+      ('hypotheses', 'ways it could be wrong', 'invented before searching anything'),
+      ('searches', 'searches run', 'aimed at the counter-case, not at your claim'),
+      ('results', 'pages returned', ''),
+      ('read', 'quotes verified', 'found word-for-word on the page they came from'),
+      ('survived', 'parts no longer true', '')
+  ] %}
+  <div class="funnel-step">
+    <span class="funnel-n" id="n-{{ key }}">0</span>
+    <span class="funnel-bar" id="bar-{{ key }}" style="width:0"></span>
+    <span class="funnel-label"><strong>{{ label }}</strong>{% if note %} — {{ note }}{% endif %}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<p class="meta" id="footnote">
+  Most of what it finds gets thrown away. That is the point — you are
+  watching it discard things, not collect them.
+</p>
+
+<script>
+const claim = {{ claim | tojson }};
+const keys = ["hypotheses", "searches", "results", "read", "survived"];
+let misses = 0;
+
+async function tick() {
+  try {
+    const r = await fetch("/api/progress?claim=" + encodeURIComponent(claim));
+    const d = await r.json();
+
+    if (d.state === "starting") {
+      if (++misses > 40) {
+        document.getElementById("stage").textContent =
+          "This is taking longer than expected. The run may have stopped.";
+        return;
+      }
+    } else {
+      document.getElementById("stage").textContent = d.stage || "working…";
+      const widest = Math.max(1, ...keys.map(k => d[k] || 0));
+      for (const k of keys) {
+        const n = d[k] || 0;
+        document.getElementById("n-" + k).textContent = n;
+        document.getElementById("bar-" + k).style.width =
+          Math.round((n / widest) * 55) + "%";
+      }
+      if (d.state === "complete" && d.claim_id) {
+        window.location = "/claim/" + d.claim_id;
+        return;
+      }
+      if (d.state === "failed") {
+        document.getElementById("heading").textContent = "That check stopped early";
+        document.getElementById("stage").textContent = d.stage;
+        document.getElementById("footnote").textContent =
+          "Nothing was hidden: the run is recorded with the reason it stopped.";
+        return;
+      }
+    }
+  } catch (e) { /* keep trying; a dropped poll is not a failure */ }
+  setTimeout(tick, 2000);
+}
+tick();
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block body %}
+
+<section class="hero">
+  <p class="lede">
+    You planned a hundred days of revision. Then the exam board moved the
+    date, and nobody told you. Your whole plan is now built on something
+    that is no longer true.
+  </p>
+  <p class="lede-sub">
+    Tell it what you are planning. It checks whether that still holds up
+    against how things are today, shows you the evidence either way, and
+    then keeps watching. When something outside your control changes, it
+    tells you. It never tells you things you already know.
+  </p>
+</section>
+
+<form method="post" action="/check" class="ask">
+  <label for="claim">What are you planning, or what do you believe?</label>
+  <textarea id="claim" name="claim" rows="3" required minlength="15"
+    placeholder="I'm preparing for JEE in April, so I have about 100 days to revise."></textarea>
+  <div class="ask-row">
+    <button type="submit">Check this</button>
+    <span class="meta">Takes a minute or two. You will see the work as it happens.</span>
+  </div>
+</form>
+
+<div class="examples meta">
+  Or try:
+  {% for e in [
+    "A bachelor's degree is required to apply to the Stanford MS in Computer Science.",
+    "Two years of work experience strengthens my graduate application.",
+    "No tool stores my plans and tells me when something changes."
+  ] %}
+  <form method="post" action="/check" style="display:inline">
+    <input type="hidden" name="claim" value="{{ e }}">
+    <button type="submit" class="link">{{ e[:46] }}…</button>
+  </form>{% if not loop.last %} · {% endif %}
+  {% endfor %}
+</div>
+
+{% if headline %}
+<h2>Something it found</h2>
+<div class="card">
+  <p class="meta">On the claim: {{ headline.claim }}</p>
+  <h3>{{ headline.text }}</h3>
+  <blockquote>{{ headline.quoted_line }}</blockquote>
+  <p class="meta">
+    <a href="{{ headline.url }}">{{ headline.url }}</a> ·
+    <strong>{{ headline.source_tier }}</strong> source
+    {% if headline.confidence %} · {{ (headline.confidence * 100) | round | int }}% confident{% endif %}
+    · <a href="/funnel/{{ headline.claim_id }}">see the work behind this</a>
+  </p>
+</div>
+{% endif %}
+
+<h2>Being watched</h2>
+{% if not claims %}
+  <p class="empty">Nothing yet. Enter something above.</p>
+{% endif %}
+{% for c in claims %}
+<div class="card">
+  <h3><a href="/claim/{{ c.id }}">{{ c.text }}</a></h3>
+  <p class="meta">
+    Checked {{ c.created_at[:10] }}
+    {% if c.stale %}· <span class="tag challenges">{{ c.stale }} part{{ 's' if c.stale > 1 }} no longer true</span>{% endif %}
+    {% if c.holds %}· <span class="tag supports">{{ c.holds }} still true</span>{% endif %}
+    {% if c.unknown %}· <span class="tag unverifiable">{{ c.unknown }} couldn't be checked</span>{% endif %}
+    {% if c.retracted %}· <span class="tag">{{ c.retracted }} withdrawn since</span>{% endif %}
+    {% if c.run_id %}· <a href="/funnel/{{ c.id }}">the work</a>{% endif %}
+  </p>
+</div>
+{% endfor %}
+{% endblock %}

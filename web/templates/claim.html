@@ -4,7 +4,7 @@
 <h2>{{ claim.text }}</h2>
 <p class="meta">
   Checked {{ claim.created_at }}.
-  {% if run %}<a href="/funnel/{{ claim.id }}">See what was discarded</a>{% endif %}
+  {% if run %}<a href="/funnel/{{ claim.id }}">See how this was checked</a>{% endif %}
 </p>
 
 {% if claim.criteria %}
@@ -16,11 +16,11 @@
 <div class="{{ 'retracted' if f.status == 'retracted' else '' }}">
 <div class="card">
   <span class="tag {{ f.stance }}">
-    {% if f.stance == 'challenges' %}challenged
-    {% elif f.stance == 'supports' %}held up
-    {% else %}unsettled{% endif %}
+    {% if f.stance == 'challenges' %}no longer true
+    {% elif f.stance == 'supports' %}still true
+    {% else %}couldn't check{% endif %}
   </span>
-  {% if f.status == 'retracted' %}<span class="tag">retracted</span>{% endif %}
+  {% if f.status == 'retracted' %}<span class="tag">withdrawn since</span>{% endif %}
   <h3 style="margin-top:.5rem">{{ f.text }}</h3>
   {% if f.sub_claim %}<p class="meta">On the assumption: {{ f.sub_claim }}</p>{% endif %}
 
@@ -38,7 +38,7 @@
 
   {% if f.reason %}<p class="meta"><strong>Why:</strong> {{ f.reason }}</p>{% endif %}
   {% if f.status == 'retracted' %}
-  <p class="meta"><strong>Retracted {{ f.retracted_at[:10] }}:</strong> {{ f.retracted_reason }}</p>
+  <p class="meta"><strong>Withdrawn {{ f.retracted_at[:10] }}:</strong> {{ f.retracted_reason }}</p>
   {% endif %}
 </div>
 </div>
