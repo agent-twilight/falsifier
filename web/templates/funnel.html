@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Funnel — {{ claim.text[:50] }}{% endblock %}
+{% block body %}
+<h2>What was thrown away</h2>
+<p class="meta">{{ claim.text }} · <a href="/claim/{{ claim.id }}">back to the verdict</a></p>
+
+{% if run %}
+{% set widest = [run.n_results, run.n_hypotheses, 1] | max %}
+<div class="card">
+  {% for label, n, note in [
+      ('hypotheses', run.n_hypotheses, 'ways the claim could be false, invented before searching'),
+      ('searches', run.n_searches, 'queries aimed at the counter-case, not the claim'),
+      ('results', run.n_results, 'pages returned'),
+      ('quotes verified', run.n_read, 'lines found word-for-word on the page they were attributed to'),
+      ('survived', run.n_survived, 'objections that held up')
+  ] %}
+  <div class="funnel-step">
+    <span class="funnel-n">{{ n }}</span>
+    <span class="funnel-bar" style="width: {{ (n / widest * 60) | round | int }}%"></span>
+    <span class="funnel-label"><strong>{{ label }}</strong> — {{ note }}</span>
+  </div>
+  {% endfor %}
+</div>
+<p class="meta">
+  Everything between those numbers was discarded on purpose. A tool that
+  shows only its answer is asking you to take its word for it.
+</p>
+{% endif %}
+
+{% if tiers %}
+<h2>What it cost</h2>
+<table>
+  <tr><th>tier</th><th class="num">calls</th><th class="num">cost</th><th class="num">avg latency</th></tr>
+  {% for t in tiers %}
+  <tr>
+    <td>{{ t.tier }}</td>
+    <td class="num">{{ t.calls }}</td>
+    <td class="num">${{ '%.4f' % (t.cost or 0) }}</td>
+    <td class="num">{{ (t.latency or 0) | round | int }} ms</td>
+  </tr>
+  {% endfor %}
+</table>
+<p class="meta">
+  Thousands of cheap calls to produce a few sentences worth reading. The
+  small model does the volume; the large one is used twice.
+</p>
+{% endif %}
+
+{% if hypotheses %}
+<h2>Every hypothesis it tried</h2>
+<table>
+  <tr><th>ways the claim could be false</th><th class="num">searches</th><th class="num">evidence</th></tr>
+  {% for h in hypotheses %}
+  <tr{% if not h.evidence %} class="retracted"{% endif %}>
+    <td>{{ h.text }}</td>
+    <td class="num">{{ h.searches }}</td>
+    <td class="num">{{ h.evidence }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p class="meta">Greyed rows found nothing. That is the normal outcome.</p>
+{% endif %}
+
+{% if searches %}
+<h2>Every query it ran</h2>
+<table>
+  <tr><th>query</th><th class="num">results</th><th class="num">credits</th></tr>
+  {% for s in searches %}
+  <tr>
+    <td>{{ s.query }}</td>
+    <td class="num">{{ s.n_results }}</td>
+    <td class="num">{{ 'cached' if s.from_cache else s.credits }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

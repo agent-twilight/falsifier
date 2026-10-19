@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ claim.text[:60] }}{% endblock %}
+{% block body %}
+<h2>{{ claim.text }}</h2>
+<p class="meta">
+  Checked {{ claim.created_at }}.
+  {% if run %}<a href="/funnel/{{ claim.id }}">See what was discarded</a>{% endif %}
+</p>
+
+{% if claim.criteria %}
+<div class="banner"><strong>A counter-example must satisfy all of:</strong><br>
+{% for line in claim.criteria.split('\n') %}&bull; {{ line }}<br>{% endfor %}</div>
+{% endif %}
+
+{% for f in findings %}
+<div class="{{ 'retracted' if f.status == 'retracted' else '' }}">
+<div class="card">
+  <span class="tag {{ f.stance }}">
+    {% if f.stance == 'challenges' %}challenged
+    {% elif f.stance == 'supports' %}held up
+    {% else %}unsettled{% endif %}
+  </span>
+  {% if f.status == 'retracted' %}<span class="tag">retracted</span>{% endif %}
+  <h3 style="margin-top:.5rem">{{ f.text }}</h3>
+  {% if f.sub_claim %}<p class="meta">On the assumption: {{ f.sub_claim }}</p>{% endif %}
+
+  {% if f.quoted_line %}
+  <blockquote>{{ f.quoted_line }}</blockquote>
+  <p class="meta">
+    <a href="{{ f.url }}">{{ f.url }}</a> ·
+    <strong>{{ f.source_tier }}</strong> source ·
+    {% if f.source_date %}published {{ f.source_date }}
+    {% elif f.last_modified %}page last changed {{ f.last_modified[:10] }}
+    {% else %}the source does not say when it was last updated{% endif %}
+    {% if f.confidence %} · confidence {{ (f.confidence * 100) | round | int }}%{% endif %}
+  </p>
+  {% endif %}
+
+  {% if f.reason %}<p class="meta"><strong>Why:</strong> {{ f.reason }}</p>{% endif %}
+  {% if f.status == 'retracted' %}
+  <p class="meta"><strong>Retracted {{ f.retracted_at[:10] }}:</strong> {{ f.retracted_reason }}</p>
+  {% endif %}
+</div>
+</div>
+{% endfor %}
+
+{% if authorities %}
+<h2>Who decides this</h2>
+<div class="card">
+{% for a in authorities %}
+  <p style="margin:.35rem 0">
+    <strong>{{ a.name }}</strong>
+    {% if a.domain %}<span class="meta">— {{ a.domain }}{% if not a.reachable %} (could not reach){% endif %}</span>{% endif %}
+    <br><span class="meta">{{ a.why }}</span>
+  </p>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -137,13 +137,13 @@ logs only exist for the days the loop has actually been running.
 
 ## Phase 4 — Interface
 
-- [ ] **33. FastAPI app running, with two modes from the start.** Personal
+- [x] ~~**33. FastAPI app running, with two modes from the start.**~~ Personal
   instance and a clean public demo session with no personal data.
   *Done when:* both open in a browser and demo mode shows nothing personal.
-- [ ] **34. Funnel screen.** The rejection log, visible. Best 30 seconds of the video.
-- [ ] **35. Counter-case screen.** Surviving objections with line, link, tier,
+- [x] ~~**34. Funnel screen.**~~ The rejection log, visible. Best 30 seconds of the video.
+- [x] ~~**35. Counter-case screen.**~~ Surviving objections with line, link, tier,
   date, confidence. Source-quality info folded in here rather than its own screen.
-- [ ] **36. Claim register screen.** Everything asserted, with status.
+- [x] ~~**36. Claim register screen.**~~ Everything asserted, with status.
   *Done when (34–36):* a stranger can navigate all three without explanation.
 
 ## Phase 5 — Memory and reusable skills

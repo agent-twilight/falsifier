@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}The Falsifier{% endblock %}</title>
+<style>
+  :root {
+    --ink: #16161a;
+    --muted: #6b6b76;
+    --line: #e2e2e6;
+    --bg: #fbfbfc;
+    --card: #ffffff;
+    --challenge: #b3261e;
+    --support: #1e6b3a;
+    --unsettled: #8a6500;
+    --accent: #2f4f8f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8e8ea; --muted: #9a9aa4; --line: #2c2c33;
+      --bg: #141417; --card: #1b1b20;
+      --challenge: #ef7a72; --support: #6cc38d; --unsettled: #d9ae4a;
+      --accent: #8fabe0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 56rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+  header { border-bottom: 1px solid var(--line); margin-bottom: 2rem; }
+  header .wrap { padding-bottom: 1rem; padding-top: 1.5rem; }
+  h1 { font-size: 1.35rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
+  h2 { font-size: 1.05rem; margin: 2rem 0 .75rem; }
+  a { color: var(--accent); }
+  nav a { margin-right: 1rem; font-size: .9rem; }
+  .sub { color: var(--muted); font-size: .9rem; margin: 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 1.1rem 1.25rem; margin-bottom: .9rem;
+  }
+  .card h3 { margin: 0 0 .4rem; font-size: 1rem; font-weight: 600; }
+  blockquote {
+    margin: .8rem 0; padding: .7rem 1rem; border-left: 3px solid var(--line);
+    background: var(--bg); font-size: .95rem;
+  }
+  .tag {
+    display: inline-block; font-size: .72rem; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase;
+    padding: .18rem .5rem; border-radius: 999px; border: 1px solid currentColor;
+  }
+  .challenges { color: var(--challenge); }
+  .supports { color: var(--support); }
+  .unverifiable { color: var(--unsettled); }
+  .retracted { opacity: .55; }
+  .retracted .card { border-style: dashed; }
+  .meta { color: var(--muted); font-size: .84rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: .8rem;
+       text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  pre { overflow-x: auto; font-size: .82rem; line-height: 1.5;
+        background: var(--card); border: 1px solid var(--line);
+        border-radius: 8px; padding: 1rem; }
+  .banner {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: .7rem 1rem; border-radius: 6px; font-size: .88rem;
+    margin-bottom: 1.5rem; color: var(--muted);
+  }
+  .empty { color: var(--muted); padding: 2rem 0; }
+  .funnel-step { display: flex; align-items: baseline; gap: .8rem; margin: .3rem 0; }
+  .funnel-bar { height: 10px; background: var(--accent); border-radius: 3px; opacity: .75; }
+  .funnel-n { font-variant-numeric: tabular-nums; min-width: 3.5rem;
+              text-align: right; font-weight: 600; }
+  .funnel-label { color: var(--muted); font-size: .88rem; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1><a href="/" style="color:inherit;text-decoration:none">The Falsifier</a></h1>
+  <p class="sub">Finds the strongest evidence that you are wrong — and says so when you are right.</p>
+  <nav><a href="/">Claims</a><a href="/numbers">Numbers</a></nav>
+</div></header>
+<div class="wrap">
+{% if demo %}
+<div class="banner">
+  Public demo. These are pre-computed example runs; no personal data is
+  shown here, and none is stored.
+</div>
+{% endif %}
+{% block body %}{% endblock %}
+</div>
+</body>
+</html>
