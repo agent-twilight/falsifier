@@ -116,7 +116,8 @@ def investigate(
 
         routine = routines.classify(claim, run_id=run_id, conn=connection)
         decomposition = decompose.decompose(
-            claim, claim_id=claim_id, run_id=run_id, conn=connection
+            claim, routine=routine, criteria=criteria,
+            claim_id=claim_id, run_id=run_id, conn=connection,
         )
         sub_rows = connection.execute(
             "SELECT id, text FROM sub_claims WHERE claim_id = ? ORDER BY position",
