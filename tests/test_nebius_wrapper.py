@@ -221,3 +221,59 @@ def test_a_call_within_budget_still_goes_through(monkeypatch, conn):
     result = nebius.complete(config.NANO, "x", stage="triage", conn=conn)
     assert result.text == "YES"
     assert len(calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# Transient network faults. A dropped connection cost nine stages of a real
+# run on 18 Oct; one blip must not be treated as a refusal.
+# ---------------------------------------------------------------------------
+
+
+def install_flaky(monkeypatch, fail_times, error, then=None):
+    """Fail the first `fail_times` calls, then succeed."""
+    state = {"n": 0}
+
+    def create(**kwargs):
+        state["n"] += 1
+        if state["n"] <= fail_times:
+            raise error
+        return then or fake_response("YES")
+
+    monkeypatch.setattr(nebius, "client", lambda: types.SimpleNamespace(
+        chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create))))
+    monkeypatch.setattr(nebius.time, "sleep", lambda s: None)
+    return state
+
+
+class APIConnectionError(Exception):
+    pass
+
+
+def test_a_transient_fault_is_retried_and_succeeds(monkeypatch, conn):
+    state = install_flaky(monkeypatch, 2, APIConnectionError("connection reset"))
+    result = nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+    assert result.text == "YES"
+    assert state["n"] == 3, "two failures then a success"
+
+
+def test_retries_are_logged_so_flakiness_is_visible(monkeypatch, conn):
+    install_flaky(monkeypatch, 1, APIConnectionError("reset"))
+    nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+    rows = conn.execute("SELECT ok, error FROM calls ORDER BY id").fetchall()
+    assert rows[0]["ok"] == 0 and "[retry 1]" in rows[0]["error"]
+    assert rows[-1]["ok"] == 1
+
+
+def test_gives_up_after_the_attempt_limit(monkeypatch, conn):
+    state = install_flaky(monkeypatch, 99, APIConnectionError("still down"))
+    with pytest.raises(nebius.ModelCallError):
+        nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+    assert state["n"] == nebius.MAX_ATTEMPTS
+
+
+def test_a_real_error_is_not_retried(monkeypatch, conn):
+    """Retrying a genuine rejection just wastes time and money."""
+    state = install_flaky(monkeypatch, 99, ValueError("bad model id"))
+    with pytest.raises(nebius.ModelCallError):
+        nebius.complete(config.NANO, "x", stage="triage", conn=conn)
+    assert state["n"] == 1, "non-transient errors fail immediately"

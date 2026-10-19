@@ -18,6 +18,7 @@ an error.
 
 from __future__ import annotations
 
+import random
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -41,6 +42,16 @@ class EmptyCompletion(ModelCallError):
 
 class BudgetExceeded(ModelCallError):
     """A cap would have been breached. No request was sent, nothing was spent."""
+
+
+# Transient network faults. Seen live on 18 Oct: a dropped connection
+# mid-run cost nine stages of a single claim, because one blip was treated
+# the same as a real refusal. A 490-call pipeline will meet these routinely,
+# so they are retried with backoff rather than reported as failures.
+TRANSIENT = ("APIConnectionError", "APITimeoutError", "ConnectionError",
+             "Timeout", "ReadTimeout", "RateLimitError",
+             "InternalServerError", "ServiceUnavailable")
+MAX_ATTEMPTS = 3
 
 
 @dataclass(frozen=True)
@@ -204,19 +215,32 @@ def complete(
     }
 
     started = time.monotonic()
-    try:
-        response = client().chat.completions.create(
-            model=tier.model_id,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-    except Exception as exc:  # noqa: BLE001 - log whatever went wrong, then re-raise
-        row["latency_ms"] = int((time.monotonic() - started) * 1000)
-        row["ok"] = 0
-        row["error"] = f"{type(exc).__name__}: {exc}"[:500]
-        _log(conn, **row)
-        raise ModelCallError(row["error"]) from exc
+    response = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            response = client().chat.completions.create(
+                model=tier.model_id,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            break
+        except Exception as exc:  # noqa: BLE001 - log it, then decide
+            name = type(exc).__name__
+            transient = any(marker in name for marker in TRANSIENT)
+            row["latency_ms"] = int((time.monotonic() - started) * 1000)
+            row["ok"] = 0
+            row["error"] = f"{name}: {exc}"[:500]
+            if transient and attempt < MAX_ATTEMPTS:
+                row["error"] = f"[retry {attempt}] {row['error']}"[:500]
+                _log(conn, **row)
+                # Exponential backoff with jitter, so a wobble upstream is
+                # not met by every pending call hammering it in lockstep.
+                time.sleep(min(8.0, 2 ** (attempt - 1)) * (0.5 + random.random()))
+                started = time.monotonic()
+                continue
+            _log(conn, **row)
+            raise ModelCallError(row["error"]) from exc
 
     latency_ms = int((time.monotonic() - started) * 1000)
     usage = response.usage
@@ -230,6 +254,10 @@ def complete(
         latency_ms=latency_ms,
         # Billed whether or not the content was usable.
         cost_usd=tier.cost(usage.prompt_tokens, usage.completion_tokens),
+        # Cleared explicitly: a retry leaves the previous attempt's failure
+        # in this dict, which would log the eventual success as an error.
+        ok=1,
+        error=None,
     )
 
     if not text:
