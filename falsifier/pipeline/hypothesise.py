@@ -23,6 +23,7 @@ import sqlite3
 
 from falsifier import config
 from falsifier.clients import nebius
+from falsifier.memory import routines
 from falsifier.pipeline import parsing
 
 ANGLES = [
@@ -75,13 +76,14 @@ def hypothesise(
     claim: str,
     sub_claim: str,
     *,
+    routine: "routines.Routine | None" = None,
     count: int = 10,
     sub_claim_id: int | None = None,
     run_id: int | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> list[str]:
     """Return concrete ways `sub_claim` could be false."""
-    chosen = ANGLES[:count]
+    chosen = (routine.angles if routine else ANGLES)[:count]
     payload = parsing.complete_json(
         config.NANO,
         PROMPT.format(

@@ -151,9 +151,10 @@ Deliberate build items. These will not emerge from the pipeline on their own.
 - [ ] **37. Situation store, small, plus minimum-slice selection.** Send three
   or four relevant facts per request, never the whole store.
   *Done when:* the logged prompt for a run contains only relevant facts, checked by eye.
-- [ ] **38. Two falsification routines**, stored as data: decomposition
-  pattern, primary-source rule, query patterns. Reduced from four.
-  *Done when:* both are stored and readable outside the code.
+- [x] ~~**38. Three falsification routines**~~, stored as data: angles,
+  primary-source rule, query guidance. Built early, on 19 Oct, because a
+  real claim exposed that one fixed angle set cannot serve every claim type.
+  *Done when:* all three are stored and readable outside the code.
 - [ ] **39. Route a claim to its routine.** Two routines that never route are
   just two prompt templates — the routing is the capability.
   *Done when:* two claims of different classes visibly take different paths.

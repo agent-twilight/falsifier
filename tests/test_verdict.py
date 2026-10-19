@@ -125,3 +125,53 @@ def test_ambiguities_are_passed_to_the_model(monkeypatch):
     verdict.judge("c", "s", [], ambiguities=["which programme?"])
     assert "which programme?" in seen["prompt"]
     assert "HAS NOT SPECIFIED" in seen["prompt"]
+
+
+def test_a_verdict_wrapped_in_a_list_is_unwrapped(monkeypatch):
+    """Seen live: losing a whole sub-claim over JSON shape is not acceptable."""
+    canned(monkeypatch, [{"verdict": "SUPPORTS", "statement": "held",
+                          "evidence_index": 1}])
+    assert verdict.judge("c", "s", EVIDENCE).stance == verdict.SUPPORTED
+
+
+def test_a_verdict_in_a_single_key_envelope_is_unwrapped(monkeypatch):
+    canned(monkeypatch, {"result": {"verdict": "CHALLENGES", "statement": "x",
+                                    "evidence_index": 1}})
+    assert verdict.judge("c", "s", EVIDENCE).stance == verdict.CHALLENGED
+
+
+# ---------------------------------------------------------------------------
+# A verdict can be no stronger than the source under it. A Reddit post was
+# allowed to carry an objection at 80% confidence on 19 Oct.
+# ---------------------------------------------------------------------------
+
+
+def _evidence(tier, url="https://example.com/x"):
+    return [read.Evidence(quote="some real line", url=url, title="t",
+                          source_tier=tier, bearing="SUPPORTS",
+                          published_date=None)]
+
+
+def test_a_weak_source_cannot_carry_a_confident_objection(monkeypatch):
+    canned(monkeypatch, {"verdict": "CHALLENGES", "statement": "x",
+                         "evidence_index": 1, "confidence": 0.8})
+    v = verdict.judge("c", "s", _evidence("weak", "https://reddit.com/r/Python/x"))
+    assert v.stance == verdict.UNVERIFIABLE
+    assert "weak source" in v.reason
+    assert "reddit.com" in v.reason
+
+
+def test_a_secondary_source_is_capped_but_still_counts(monkeypatch):
+    canned(monkeypatch, {"verdict": "CHALLENGES", "statement": "x",
+                         "evidence_index": 1, "confidence": 0.95})
+    v = verdict.judge("c", "s", _evidence("secondary"))
+    assert v.stance == verdict.CHALLENGED
+    assert v.confidence == 0.7, "capped to what a secondary source can bear"
+
+
+def test_a_primary_source_keeps_full_confidence(monkeypatch):
+    canned(monkeypatch, {"verdict": "SUPPORTS", "statement": "x",
+                         "evidence_index": 1, "confidence": 0.95})
+    v = verdict.judge("c", "s", _evidence("primary", "https://stanford.edu/x"))
+    assert v.stance == verdict.SUPPORTED
+    assert v.confidence == 0.95

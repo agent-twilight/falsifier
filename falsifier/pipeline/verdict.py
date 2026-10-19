@@ -28,6 +28,16 @@ CHALLENGED = "challenges"
 SUPPORTED = "supports"
 UNVERIFIABLE = "unverifiable"
 
+# A verdict can be no stronger than the source under it. Seen on 19 Oct:
+# a Reddit post, already graded "weak" by the system, was allowed to carry
+# an objection at 80% confidence. Grading a source and then ignoring the
+# grade is worse than not grading it, because it looks rigorous.
+CONFIDENCE_CEILING = {"primary": 1.0, "secondary": 0.7, "weak": 0.35}
+
+# Below this, an objection is not worth putting in front of someone as a
+# reason to change their plans. It is reported as unsettled instead.
+MIN_CONFIDENCE_TO_TAKE_A_SIDE = 0.4
+
 PROMPT = """You investigated a claim by trying hard to disprove it. Now \
 report honestly on what the evidence shows.
 
@@ -173,6 +183,14 @@ def judge(
         run_id=run_id,
         conn=conn,
     )
+    # Models occasionally wrap the verdict in a list, or in a single-key
+    # envelope. Unwrap rather than losing the whole sub-claim over shape.
+    if isinstance(payload, list) and payload:
+        payload = payload[0]
+    if isinstance(payload, dict) and "verdict" not in payload and len(payload) == 1:
+        inner = next(iter(payload.values()))
+        if isinstance(inner, dict):
+            payload = inner
     if not isinstance(payload, dict):
         raise parsing.ParseError("verdict was not an object")
 
@@ -208,6 +226,22 @@ def judge(
         confidence = min(1.0, max(0.0, float(confidence)))
     except (TypeError, ValueError):
         confidence = 0.5
+
+    # Cap confidence at what the source can bear, then refuse to take a
+    # side at all on evidence too weak to act on.
+    if chosen is not None:
+        ceiling = CONFIDENCE_CEILING.get(chosen.source_tier, 0.5)
+        if confidence > ceiling:
+            confidence = ceiling
+        if (stance in (CHALLENGED, SUPPORTED)
+                and confidence < MIN_CONFIDENCE_TO_TAKE_A_SIDE):
+            reason = (
+                f"The only evidence found was a {chosen.source_tier} source "
+                f"({chosen.url}), which is not strong enough to {stance[:-1]} "
+                "a claim you might act on."
+            )
+            stance = UNVERIFIABLE
+            chosen = None
 
     return Verdict(
         stance=stance,

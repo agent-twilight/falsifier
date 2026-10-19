@@ -38,9 +38,21 @@ website, published statistics and class profiles, official FAQs and policy \
 pages, regulatory filings. Not blogs, not forums, not consultancies.
 
 Write {count} queries. Each should:
-- read like something typed into a search box, not a sentence
-- use the words the authoritative source would itself use
+- read like something a real person types into a search box
+- use plain, common words that the source itself would use
 - attack from a different direction to the others
+
+Keep queries SHORT: three to seven words. Long queries match nothing.
+
+Use only vocabulary that appears in the claim or is ordinary English for the subject. Do not reach for industry jargon, acronyms or regulatory terms unless the claim itself uses them - an invented technical term sends the search somewhere unrelated.
+
+Bad:  "SaMD plan monitoring inconsistent data alerts"
+      (invented jargon; nobody writes this)
+Bad:  "AI conversational agent certification requirement data retention"
+      (long, abstract, matches nothing)
+Good: "app that tracks your goals and alerts you"
+Good: "AI assistant remembers plans notifies changes"
+Good: "goal tracking app alternatives"
 
 Do not invent document names or statistics.
 
@@ -51,6 +63,7 @@ def angles(
     claim: str,
     hypothesis: str,
     *,
+    routine=None,
     count: int = 3,
     run_id: int | None = None,
     conn: sqlite3.Connection | None = None,
@@ -58,7 +71,13 @@ def angles(
     """Return search queries aimed at confirming `hypothesis`."""
     payload = parsing.complete_json(
         config.NANO,
-        PROMPT.format(claim=claim, hypothesis=hypothesis, count=count),
+        PROMPT.format(
+            claim=claim, hypothesis=hypothesis, count=count,
+            primary_sources=(routine.primary_sources if routine else
+                             "the issuing body's own site and published statistics"),
+            query_guidance=(routine.query_guidance if routine else
+                            "Use the words the authoritative source would use."),
+        ),
         stage="query-angles",
         max_tokens=1500,
         run_id=run_id,

@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 from falsifier import config
 from falsifier.clients import nebius, tavily
-from falsifier.memory import db
+from falsifier.memory import db, routines
 from falsifier.pipeline import (
     angles, decompose, freshness, hypothesise, parsing, read, verdict,
 )
@@ -62,6 +62,7 @@ class RunResult:
     cost_usd: float = 0.0
     credits: int = 0
     failures: list[str] = field(default_factory=list)
+    routine: str = ""
 
 
 def _store_evidence(
@@ -111,6 +112,7 @@ def investigate(
         ).lastrowid
         connection.commit()
 
+        routine = routines.classify(claim, run_id=run_id, conn=connection)
         decomposition = decompose.decompose(
             claim, claim_id=claim_id, run_id=run_id, conn=connection
         )
@@ -128,7 +130,7 @@ def investigate(
 
             try:
                 hypotheses = hypothesise.hypothesise(
-                    claim, sub_text, count=shape["hypotheses"],
+                    claim, sub_text, routine=routine, count=shape["hypotheses"],
                     sub_claim_id=sub_id, run_id=run_id, conn=connection,
                 )
             except (parsing.ParseError, nebius.ModelCallError) as exc:
@@ -146,7 +148,7 @@ def investigate(
                 hyp_id, hyp_text = hyp_row["id"], hyp_row["text"]
                 try:
                     queries = angles.angles(
-                        claim, hyp_text, count=shape["angles"],
+                        claim, hyp_text, routine=routine, count=shape["angles"],
                         run_id=run_id, conn=connection,
                     )
                 except (parsing.ParseError, nebius.ModelCallError) as exc:
@@ -243,6 +245,7 @@ def investigate(
                 ambiguities=decomposition.ambiguities,
             ),
             funnel=funnel, cost_usd=cost, credits=credits, failures=failures,
+            routine=routine.name,
         )
     finally:
         if owned:
