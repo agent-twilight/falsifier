@@ -222,3 +222,51 @@ def test_research_respects_its_credit_ceiling(conn, monkeypatch):
         query=q, credits=1, results=[tavily.Result(f"https://new/{q}", "t", "s")]))
     result = monitor.research(conn, max_credits=2)
     assert result.credits_spent <= 2, "the one budget that actually runs out"
+
+
+# ---------------------------------------------------------------------------
+# The message has to read properly end to end. It is going in the demo video,
+# and an arbitrary 200-character slice cut it off mid-sentence.
+# ---------------------------------------------------------------------------
+
+
+def test_a_normal_message_is_not_shortened_at_all():
+    statement = (
+        "The Stanford MS in Computer Science admissions page states that "
+        "applicants must hold or expect to hold a bachelor's degree before "
+        "enrollment, not that it is required at the time of application, "
+        "which contradicts the claim that a degree is required to apply."
+    )
+    change = monitor.Change(1, "A degree is required to apply.", statement,
+                            URL, "retracted", "the line has gone")
+    message = monitor.compose([change])
+    assert statement in message, "the statement must appear whole"
+    assert "\u2026" not in message
+    assert message.rstrip().endswith(URL)
+
+
+def test_an_enormous_statement_is_cut_at_a_sentence_not_mid_word():
+    statement = ("First sentence here. " * 400).strip()
+    change = monitor.Change(1, "c", statement, URL, "retracted", "gone")
+    message = monitor.compose([change])
+    assert len(message) <= monitor.TELEGRAM_MAX_CHARS
+    assert URL in message, "the link survives shortening"
+
+
+def test_the_claim_and_link_are_never_sacrificed():
+    change = monitor.Change(1, "A short claim.", "x " * 5000, URL,
+                            "retracted", "gone")
+    message = monitor.compose([change])
+    assert "A short claim." in message
+    assert URL in message
+    assert len(message) <= monitor.TELEGRAM_MAX_CHARS
+
+
+def test_trim_ends_on_a_sentence_when_it_can():
+    text = "One sentence. Two sentence. Three sentence that runs on and on."
+    assert monitor._trim(text, 30).endswith(". ") or monitor._trim(text, 30).endswith(".")
+
+
+def test_trim_never_splits_a_word():
+    assert not monitor._trim("supercalifragilistic expialidocious", 20).rstrip(
+        "\u2026").endswith("supercalifragi")

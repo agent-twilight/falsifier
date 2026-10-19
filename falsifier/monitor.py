@@ -79,6 +79,11 @@ class DayResult:
 # Telegram
 # --------------------------------------------------------------------------
 
+# Telegram's own limit. Messages are not shortened below this; the earlier
+# 200-character cut was an arbitrary choice of mine and sliced sentences in
+# half mid-word, which is useless to read and worse on camera.
+TELEGRAM_MAX_CHARS = 4096
+
 
 def send(text: str) -> bool:
     """Message the user. Returns False rather than raising; a failed
@@ -100,6 +105,25 @@ def send(text: str) -> bool:
         return False
 
 
+def _trim(text: str, limit: int) -> str:
+    """Shorten only if genuinely too long, and never mid-word.
+
+    Prefers to end on a sentence, falls back to a word boundary, and says
+    so with an ellipsis rather than stopping dead.
+    """
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+
+    window = text[: limit - 1]
+    for end in (". ", "? ", "! "):
+        cut = window.rfind(end)
+        if cut > limit * 0.6:
+            return window[: cut + 1]
+    cut = window.rfind(" ")
+    return (window[:cut] if cut > 0 else window).rstrip(",;:") + "…"
+
+
 def compose(changes: list[Change]) -> str:
     """What the user actually reads. Outward-facing facts only.
 
@@ -108,21 +132,36 @@ def compose(changes: list[Change]) -> str:
     """
     if not changes:
         return ""
+
     if len(changes) == 1:
         change = changes[0]
-        return (
-            f"{change.describe()}\n\n"
-            f'Your claim: "{change.claim[:160]}"\n\n'
-            f"What I had said: {change.statement[:200]}\n\n"
+        head = change.describe()
+        body = (
+            f"{head}\n\n"
+            f'Your claim: "{change.claim}"\n\n'
+            f"What I had said: {change.statement}\n\n"
             f"Source: {change.url}"
         )
+        if len(body) <= TELEGRAM_MAX_CHARS:
+            return body
+        # Only now is anything shortened, and the statement gives way
+        # before the claim or the link, which must stay whole.
+        room = TELEGRAM_MAX_CHARS - (len(body) - len(change.statement)) - 1
+        return (
+            f"{head}\n\n"
+            f'Your claim: "{change.claim}"\n\n'
+            f"What I had said: {_trim(change.statement, max(room, 200))}\n\n"
+            f"Source: {change.url}"
+        )
+
     lines = [f"{len(changes)} things changed since I last checked.", ""]
     for change in changes[:5]:
         lines.append(f"- {change.describe()}")
         lines.append(f"  {change.url}")
     if len(changes) > 5:
         lines.append(f"...and {len(changes) - 5} more.")
-    return "\n".join(lines)
+    text = "\n".join(lines)
+    return text if len(text) <= TELEGRAM_MAX_CHARS else _trim(text, TELEGRAM_MAX_CHARS)
 
 
 # --------------------------------------------------------------------------
