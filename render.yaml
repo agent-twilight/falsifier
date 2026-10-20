@@ -1,0 +1,32 @@
+# Render blueprint. Lets the service be recreated from this file rather
+# than from remembered dashboard clicks.
+#
+# The free plan sleeps after about fifteen minutes idle and cold-starts in
+# roughly fifty seconds. That is acceptable here because the demo ships its
+# own database and keeps nothing, so waking up costs only time.
+services:
+  - type: web
+    name: falsifier
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      # Set in the dashboard, never committed.
+      - key: NEBIUS_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      # Not secret, so they live here where they can be reviewed.
+      - key: NEBIUS_BASE_URL
+        value: https://api.tokenfactory.nebius.com/v1/
+      - key: NEMOTRON_NANO
+        value: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
+      - key: NEMOTRON_SUPER
+        value: nvidia/nemotron-3-super-120b-a12b
+      - key: NEMOTRON_ULTRA
+        value: nvidia/Nemotron-3-Ultra-550b-a55b
+      # Belt and braces: the image already sets this, but a misconfigured
+      # service must never be able to run in personal mode.
+      - key: FALSIFIER_DEMO
+        value: "1"

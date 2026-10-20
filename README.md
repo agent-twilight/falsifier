@@ -1,14 +1,3 @@
----
-title: The Falsifier
-emoji: 🔍
-colorFrom: indigo
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: false
-license: mit
----
-
 # The Falsifier
 
 **Keeps your plans honest against a world that moves.**
