@@ -1,3 +1,10 @@
+> **Note, 18 October 2026.** This document describes the project's original
+> framing, as a tool whose job is to prove you wrong. That framing was
+> superseded: the method is still adversarial, but the product is an aide
+> that keeps your plans current, and agreeing with you is a legitimate
+> result. **[README.md](README.md) is the current description.** This file is
+> kept for the design reasoning, which still holds.
+
 # The Falsifier
 
 **Nebius x NVIDIA Global AI Hackathon — Personal AI Track**

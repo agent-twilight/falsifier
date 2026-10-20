@@ -163,10 +163,10 @@ Deliberate build items. These will not emerge from the pipeline on their own.
 
 ## Phase 6 — Measurement and ship
 
-- [ ] **40. Tier table generated from SQLite**, not estimated. Volume, cost and
+- [x] ~~**40. Tier table generated from SQLite**~~, not estimated. Volume, cost and
   latency per tier.
   *Done when:* the numbers come out of a query over real logged runs.
-- [ ] **41. Naive baseline comparison.** What the same workload costs routed
+- [x] ~~**41. Naive baseline comparison.**~~ What the same workload costs routed
   entirely to Ultra.
   *Done when:* one table shows both, with the multiple.
 - [ ] **42. Seed the register from existing writing** and use it daily.
@@ -174,7 +174,7 @@ Deliberate build items. These will not emerge from the pipeline on their own.
 - [ ] **43. Public demo hardening.** Pre-computed replays by default; live runs
   behind a hard daily cap.
   *Done when:* a stranger can use it without being able to drain the Tavily balance.
-- [ ] **44. README rewrite for judges.** Resolve `README1.md` → `README.md` so
+- [x] ~~**44. README rewrite for judges.**~~ Resolve `README1.md` → `README.md` so
   GitHub renders it. Setup instructions, Nemotron and Token Factory usage, the
   numbers. State the actual logged run duration — do not overclaim it.
   *Done when:* a stranger clones and runs it in under 10 minutes, tested clean.
