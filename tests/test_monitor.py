@@ -270,3 +270,59 @@ def test_trim_ends_on_a_sentence_when_it_can():
 def test_trim_never_splits_a_word():
     assert not monitor._trim("supercalifragilistic expialidocious", 20).rstrip(
         "\u2026").endswith("supercalifragi")
+
+
+# ---------------------------------------------------------------------------
+# False retractions. A real source on 23 Oct was a government PDF; the code
+# stripped HTML tags from its bytes, failed to find the quote, and withdrew
+# a finding that had not changed at all.
+# ---------------------------------------------------------------------------
+
+
+def test_an_unreadable_document_is_not_a_retraction(conn, monkeypatch):
+    """A PDF we cannot parse is 'could not check', not 'the quote is gone'."""
+    seed_finding(conn, url="https://nta.ac.in/notice.pdf")
+    state = freshness.PageState(
+        url="https://nta.ac.in/notice.pdf", status=200, etag='"v2"',
+        checked_at=datetime.now(timezone.utc),
+        error="unreadable format: application/pdf",
+    )
+    monkeypatch.setattr(freshness, "check", lambda url, **kw: state)
+    monkeypatch.setattr(freshness, "fetch_text", lambda url: (None, state))
+
+    result = monitor.run_once(conn, include_research=False)
+
+    assert conn.execute(
+        "SELECT status FROM findings WHERE id=1").fetchone()[0] == "live"
+    assert result.quiet, "the user must not be told a finding collapsed"
+    assert any("pdf" in e for e in result.errors)
+    assert sent == []
+
+
+def test_fetch_text_refuses_a_pdf(monkeypatch):
+    """The guard belongs in fetch_text, so every caller inherits it."""
+    import types
+
+    def get(url, **kwargs):
+        return types.SimpleNamespace(
+            status_code=200, text="%PDF-1.7 binary rubbish",
+            headers={"Content-Type": "application/pdf"})
+
+    monkeypatch.setattr(freshness.requests, "get", get)
+    text, state = freshness.fetch_text("https://example.gov/notice.pdf")
+    assert text is None
+    assert "application/pdf" in state.error
+
+
+def test_fetch_text_still_reads_html(monkeypatch):
+    import types
+
+    def get(url, **kwargs):
+        return types.SimpleNamespace(
+            status_code=200, text="<html><body><p>A real sentence.</p></body></html>",
+            headers={"Content-Type": "text/html; charset=utf-8"})
+
+    monkeypatch.setattr(freshness.requests, "get", get)
+    text, state = freshness.fetch_text("https://example.edu/page")
+    assert text is not None and "A real sentence." in text
+    assert state.error is None

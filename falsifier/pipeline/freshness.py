@@ -134,8 +134,18 @@ def fingerprint(text: str) -> str:
     return hashlib.sha256(normalised.encode("utf-8")).hexdigest()[:32]
 
 
+# Formats whose text we can actually read. Anything else is fetched, but
+# reported as unreadable rather than silently treated as empty.
+READABLE_TYPES = ("text/html", "text/plain", "application/xhtml")
+
+
 def fetch_text(url: str) -> tuple[str | None, PageState]:
-    """Download a page's text, for checking whether a quote survives."""
+    """Download a page's text, for checking whether a quote survives.
+
+    Returns (None, state) when the document cannot be read as text - a PDF,
+    an image, an office file. The caller must treat that as "could not
+    check", never as "the quote is gone".
+    """
     now = datetime.now(timezone.utc)
     try:
         response = requests.get(
@@ -155,6 +165,15 @@ def fetch_text(url: str) -> tuple[str | None, PageState]:
     if response.status_code != 200:
         return None, state
 
+    content_type = (lowered.get("content-type") or "").lower()
+    if content_type and not any(t in content_type for t in READABLE_TYPES):
+        return None, PageState(
+            url=state.url, status=state.status,
+            last_modified=state.last_modified, etag=state.etag,
+            checked_at=state.checked_at,
+            error=f"unreadable format: {content_type.split(';')[0]}",
+        )
+
     # Strip tags crudely. Good enough to ask "is this sentence still here?",
     # which is all we need; it never has to render.
     import re
@@ -169,10 +188,14 @@ def fetch_text(url: str) -> tuple[str | None, PageState]:
 
 # How often to re-check, by how fast that kind of fact actually moves.
 # Admissions criteria change between cycles; news changes hourly.
+# Shortened 23 Oct. The first numbers were guesses, and far too cautious:
+# a re-check costs nothing, because an unchanged page answers 304 with no
+# body transferred. Waiting a fortnight buys no saving and lets a change
+# sit undiscovered for a fortnight.
 HALF_LIVES_DAYS = {
-    "primary": 14,
-    "secondary": 7,
-    "weak": 30,
+    "primary": 3,
+    "secondary": 2,
+    "weak": 7,
 }
 
 
@@ -183,5 +206,5 @@ def next_check_days(source_tier: str, state: PageState | None = None) -> int:
     """
     base = HALF_LIVES_DAYS.get(source_tier, 14)
     if state and state.age_days is not None and state.age_days < 30:
-        return max(3, base // 2)
+        return max(1, base // 2)
     return base

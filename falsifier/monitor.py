@@ -239,8 +239,15 @@ def reverify(conn: sqlite3.Connection, limit: int = 200) -> DayResult:
         # whether the page changed but whether our sentence survived it.
         text, fetched = freshness.fetch_text(row["url"])
         if text is None:
-            result.errors.append(f"{row['url']}: could not fetch")
-            _reschedule(conn, row["id"], row["source_tier"])
+            # Could not read it - a PDF, an image, a fetch that failed.
+            # Being unable to check is never evidence that the quote has
+            # gone. Retracting here would tell the user a finding had
+            # collapsed when nothing had changed, which is the worst thing
+            # this tool could do.
+            result.errors.append(
+                f"{row['url']}: {fetched.error or 'could not fetch'}"
+            )
+            _reschedule(conn, row["id"], row["source_tier"], fetched)
             continue
 
         from falsifier.pipeline import read as read_stage

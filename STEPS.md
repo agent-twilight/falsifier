@@ -108,8 +108,12 @@ so iteration is free. Ugly is fine here; working is the only requirement.
 - [x] ~~**26. Graceful failure on four paths.**~~ Malformed model output, Tavily
   timeout, dead link, budget ceiling hit.
   *Done when:* each is simulated and the run degrades with a visible reason instead of crashing.
-- [ ] **27. GATE — one real claim of yours, end to end.**
-  *Done when:* you type a belief you actually hold and read a sourced counter-case you did not already know.
+- [x] ~~**27. GATE — one real claim of yours, end to end.**~~
+  Met twice: the user's startup premise (19 Oct), and a claim they entered
+  themselves through the website about staying in their current role, which
+  correctly returned "cannot settle this" and named the four facts only they
+  could supply.
+  *Done when:* you type a belief you actually hold and read a sourced answer you did not already have.
 
 ## Phase 3 — Running unattended
 
@@ -157,8 +161,9 @@ Deliberate build items. These will not emerge from the pipeline on their own.
   primary-source rule, query guidance. Built early, on 19 Oct, because a
   real claim exposed that one fixed angle set cannot serve every claim type.
   *Done when:* all three are stored and readable outside the code.
-- [ ] **39. Route a claim to its routine.** Two routines that never route are
-  just two prompt templates — the routing is the capability.
+- [x] ~~**39. Route a claim to its routine**~~, and write a new one when none
+  fits. A ballet claim produced a routine the agent named
+  `late-entry-profession`, which later matched a violin claim.
   *Done when:* two claims of different classes visibly take different paths.
 
 ## Phase 6 — Measurement and ship
