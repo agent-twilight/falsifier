@@ -43,6 +43,56 @@ Two rules that make this worth anything:
 
 ## Entries
 
+## 2026-10-23 — Summary for the Nebius team
+
+Three weeks building on Token Factory with all three Nemotron 3 tiers, in
+a pipeline that makes roughly 490 calls per task. What follows is what
+cost us time, in the order we hit it.
+
+**1. Reasoning tokens bill against `max_tokens`, and running out is
+silent.** Detailed above. This cost the most time of anything here,
+because the failure looks like success: an empty string with
+`finish_reason="stop"`. A `finish_reason` of `"length"` would have made it
+obvious in seconds. Anyone porting existing OpenAI code will write
+`max_tokens=16` for a yes/no answer and get nothing back.
+
+**2. `reasoning_effort="none"` returns empty output instead of an error.**
+Also detailed above. An unsupported parameter value should be rejected.
+
+**3. `"detailed thinking off"` has no effect on Nemotron 3.** It is the
+documented way to control reasoning on Nemotron 2, so it is what people
+will try first, and it fails silently. `/no_think` works. A note in the
+Nemotron 3 model card would save people an afternoon.
+
+**4. Model id capitalisation is inconsistent across the catalogue.**
+`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` but
+`nvidia/nemotron-3-super-120b-a12b`. Both are correct, which we only
+established by trying them. Ids are case-sensitive, so a reasonable guess
+fails with an unhelpful error.
+
+**5. The AI Studio to Token Factory rename leaves stale base URLs in
+circulation.** Tutorials, blog posts and sample code still carry the old
+host. A wrong base URL fails as a 404 rather than something that says
+"wrong endpoint". We deliberately left the URL blank until we could read
+it from current docs.
+
+**What worked well, since the above is all complaints:** the
+OpenAI-compatible endpoint meant the existing client worked unmodified
+with only a `base_url` change. Latency was consistently good — 1.9s median
+for a Nano call, 8.6s for Super. Across 370 logged calls our failure rate
+was 2.2%, all transient connection errors that succeeded on retry. And the
+price difference between tiers is what made the architecture possible at
+all: 94% of our calls go to Nano, and the whole task costs under ten
+cents.
+
+**One measurement you may find useful.** We built the three-tier split
+expecting roughly a 20x saving over routing everything to Ultra. Measured
+from logged tokens, holding token counts fixed and swapping only the
+model, it is **9.5x**. Still a large number, and still the reason the
+design works, but a third of what the marketing intuition suggested.
+
+---
+
 ## 2026-10-17 — Nemotron 3 on Token Factory: reasoning tokens and silent empty output
 
 **What I was trying to do:** First smoke test of all three Nemotron 3 tiers

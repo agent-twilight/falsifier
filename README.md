@@ -16,6 +16,14 @@ It is not a reminder app. It never tells you things you already know. "Study
 chemistry today" is your own plan read back at you. "The exam date moved" is
 information you could not have had.
 
+**Try it: [falsifier.onrender.com](https://falsifier.onrender.com)** — type a
+claim of your own and watch it work. It runs for real against live sources,
+takes a minute or two, and shows every search it ran and every result it
+threw away. Two worked examples are there already.
+
+> On a free host it sleeps after fifteen minutes idle, so the first load may
+> take about fifty seconds.
+
 Built for the **Nebius x NVIDIA Global AI Hackathon**, Personal AI track.
 
 ---

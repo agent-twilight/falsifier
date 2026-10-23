@@ -176,8 +176,10 @@ Deliberate build items. These will not emerge from the pipeline on their own.
   *Done when:* one table shows both, with the multiple.
 - [ ] **42. Seed the register from existing writing** and use it daily.
   *Done when:* the register holds real claims accumulating real timestamps.
-- [ ] **43. Public demo hardening.** Pre-computed replays by default; live runs
-  behind a hard daily cap.
+- [x] ~~**43. Public demo live at falsifier.onrender.com.**~~ Two worked
+  examples ship inside the image; live runs are capped at 25 a day and use a
+  leaner profile. Verified against the deployed site: demo mode on, every
+  personal claim 404, a stranger's claim answered in 106 seconds.
   *Done when:* a stranger can use it without being able to drain the Tavily balance.
 - [x] ~~**44. README rewrite for judges.**~~ Resolve `README1.md` → `README.md` so
   GitHub renders it. Setup instructions, Nemotron and Token Factory usage, the
@@ -185,7 +187,8 @@ Deliberate build items. These will not emerge from the pipeline on their own.
   *Done when:* a stranger clones and runs it in under 10 minutes, tested clean.
 - [ ] **45. Demo video, under 3 minutes, public on YouTube.** Audio covers
   Token Factory and Nemotron. Shows the funnel and a real retraction.
-- [ ] **46. Feedback write-up finalised** from `FEEDBACK.md`.
+- [x] ~~**46. Feedback write-up finalised**~~ in `FEEDBACK.md`: five issues
+  with reproductions, plus what worked and the measured 9.5x tier saving.
 - [ ] **47. Flip the GitHub repo to Public.** A private repo on submission day
   is an invalid entry.
 - [ ] **48. Submit**, with slack before the 30 Oct 10:30pm IST deadline.
