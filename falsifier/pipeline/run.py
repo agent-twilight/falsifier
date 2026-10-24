@@ -23,8 +23,8 @@ from falsifier import config
 from falsifier.clients import nebius, tavily
 from falsifier.memory import db, routines
 from falsifier.pipeline import (
-    angles, authority, decompose, freshness, hypothesise, parsing, read,
-    verdict,
+    angles, assess, authority, decompose, freshness, hypothesise, parsing,
+    read, verdict,
 )
 
 
@@ -81,6 +81,7 @@ class RunResult:
     failures: list[str] = field(default_factory=list)
     routine: str = ""
     authorities: list = field(default_factory=list)
+    assessment: object = None
 
 
 def _store_evidence(
@@ -162,6 +163,7 @@ def investigate(
         funnel.sub_claims = len(sub_rows)
 
         verdicts: list[verdict.Verdict] = []
+        all_evidence: list[tuple[read.Evidence, int | None]] = []
 
         for sub_row in sub_rows:
             sub_id, sub_text = sub_row["id"], sub_row["text"]
@@ -237,9 +239,9 @@ def investigate(
                             continue
                         funnel.quotes_verified += 1
                         _publish(connection, run_id, funnel, "reading sources")
-                        evidence_for_sub.append(
-                            (ev, _store_evidence(connection, hyp_id, ev))
-                        )
+                        stored = (ev, _store_evidence(connection, hyp_id, ev))
+                        evidence_for_sub.append(stored)
+                        all_evidence.append(stored)
 
             try:
                 judgement = verdict.judge(
@@ -270,6 +272,27 @@ def investigate(
             else:
                 funnel.unverifiable += 1
 
+        # The useful part: reason past the citations, labelled as reasoning.
+        assessment = None
+        try:
+            assessment = assess.assess(
+                claim, verdicts,
+                [ev for ev, _ in all_evidence],
+                run_id=run_id, conn=connection,
+            )
+        except (parsing.ParseError, nebius.ModelCallError) as exc:
+            failures.append(f"assessment: {exc}")
+
+        if assessment is not None:
+            connection.execute(
+                "UPDATE runs SET hinges_on = ?, assessment = ?, inferred = ?, "
+                "worth_finding = ? WHERE id = ?",
+                (assessment.hinges_on, assessment.body,
+                 "\n".join(assessment.inferred),
+                 assessment.worth_finding_out, run_id),
+            )
+            connection.commit()
+
         cost = nebius.spend_total(connection) - started_usd
         credits = tavily.credits_spent(connection) - started_credits
 
@@ -291,6 +314,7 @@ def investigate(
             ),
             funnel=funnel, cost_usd=cost, credits=credits, failures=failures,
             routine=routine.name, authorities=found_authorities,
+            assessment=assessment,
         )
     finally:
         if owned:

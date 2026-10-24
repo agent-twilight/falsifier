@@ -57,7 +57,13 @@ CREATE TABLE IF NOT EXISTS runs (
     n_read          INTEGER NOT NULL DEFAULT 0,
     n_survived      INTEGER NOT NULL DEFAULT 0,
     cost_usd        REAL NOT NULL DEFAULT 0,
-    tavily_credits  INTEGER NOT NULL DEFAULT 0
+    tavily_credits  INTEGER NOT NULL DEFAULT 0,
+    -- Reasoning past the citations, kept separate from findings so the
+    -- two can never be confused. See pipeline/assess.py.
+    hinges_on       TEXT,
+    assessment      TEXT,
+    inferred        TEXT,
+    worth_finding   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sub_claims (
