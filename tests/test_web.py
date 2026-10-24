@@ -1,23 +1,23 @@
 """The interface must show the evidence, and the demo must never leak.
 
-The separation between personal and demo mode is the one thing here that
-is a correctness requirement rather than presentation: the public URL and
-the user's own instance run the same code against the same schema, so the
-filter has to be real.
+Two things here are correctness rather than presentation: a personal thread
+must be unreachable from the public demo even by guessing its id, and
+anything a model or a stranger writes must not be able to inject markup.
 """
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
-from falsifier.memory import db
-from web import main
+from falsifier.memory import db, sessions
+from web import main, markup
 
 
 def visible(html: str) -> str:
     """Just the words a reader sees. Styles and scripts are not copy."""
-    import re
     html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.S)
     html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.S)
     return re.sub(r"<[^>]+>", " ", html)
@@ -25,9 +25,13 @@ def visible(html: str) -> str:
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    conn = db.init_db(tmp_path / "t.db")
-    monkeypatch.setattr(main, "connect", lambda: db.connect(tmp_path / "t.db"))
+    path = tmp_path / "t.db"
+    conn = db.init_db(path)
+    monkeypatch.setattr(main, "connect", lambda: db.connect(path))
     monkeypatch.delenv("FALSIFIER_DEMO", raising=False)
+    monkeypatch.setattr(
+        main.threading, "Thread",
+        lambda *a, **k: type("T", (), {"start": lambda s: None})())
     _seed(conn)
     conn.close()
     yield TestClient(main.app)
@@ -35,93 +39,133 @@ def client(tmp_path, monkeypatch):
 
 def _seed(conn):
     conn.execute("INSERT INTO claims (id, text, mode) VALUES "
-                 "(1, 'A degree is required', 'personal')")
+                 "(1, 'A degree is required to apply', 'personal')")
     conn.execute("INSERT INTO claims (id, text, mode) VALUES "
-                 "(2, 'A public example claim', 'demo')")
+                 "(2, 'A public example plan', 'demo')")
     conn.execute("INSERT INTO sub_claims (id, claim_id, text) VALUES (1, 1, 'the sub-claim')")
     conn.execute("INSERT INTO hypotheses (id, sub_claim_id, text) VALUES (1, 1, 'a hypothesis')")
-    conn.execute(
-        "INSERT INTO evidence (id, hypothesis_id, quoted_line, url, source_tier) "
-        "VALUES (1, 1, 'Applicants must hold a degree.', "
-        "'https://cs.stanford.edu/admissions', 'primary')")
-    conn.execute(
-        "INSERT INTO findings (id, claim_id, sub_claim_id, evidence_id, stance, "
-        "text, confidence) VALUES (1, 1, 1, 1, 'supports', 'The claim held up.', 0.9)")
-    conn.execute(
-        "INSERT INTO findings (claim_id, stance, text, reason) VALUES "
-        "(1, 'unverifiable', 'Could not settle this.', 'the sources are silent')")
-    conn.execute("INSERT INTO runs (id, claim_id, mode, n_hypotheses, n_searches, "
-                 "n_results, n_read, n_survived) VALUES (1, 1, 'personal', 50, 40, 412, 25, 2)")
+    conn.execute("INSERT INTO evidence (id, hypothesis_id, quoted_line, url, source_tier) "
+                 "VALUES (1, 1, 'Applicants must hold a degree.', "
+                 "'https://cs.stanford.edu/admissions', 'primary')")
+    conn.execute("INSERT INTO findings (id, claim_id, sub_claim_id, evidence_id, stance, "
+                 "text, confidence) VALUES (1, 1, 1, 1, 'supports', 'It held up.', 0.9)")
+    conn.execute("INSERT INTO runs (id, claim_id, mode, status, n_hypotheses, n_searches, "
+                 "n_results, n_read, n_survived, assessment, hinges_on) VALUES "
+                 "(1, 1, 'personal', 'complete', 50, 40, 412, 25, 2, "
+                 "'The arithmetic only works if the grant grows.', 'Equity, not salary.')")
     conn.execute("INSERT INTO searches (id, run_id, hypothesis_id, query, n_results) "
                  "VALUES (1, 1, 1, 'a query that was run', 5)")
-    conn.execute("INSERT INTO claim_authorities (claim_id, name, domain, why, reachable) "
-                 "VALUES (1, 'Stanford', 'stanford.edu', 'sets its own rules', 1)")
     conn.commit()
 
+    personal = sessions.create(conn, "A degree is required", claim_id=1)
+    sessions.add(conn, personal, "user", "A degree is required to apply")
+    sessions.add(conn, personal, "agent",
+                 "**This part still holds.** It held up.\n\n"
+                 "> Applicants must hold a degree.\n\n"
+                 "[https://cs.stanford.edu/admissions](https://cs.stanford.edu/admissions)"
+                 " - primary source", kind="finding")
+    demo = sessions.create(conn, "A public example plan", mode="demo", claim_id=2)
+    sessions.add(conn, demo, "user", "A public example plan")
 
-# --- the evidence must be visible ------------------------------------------
+
+# --- the evidence is visible ----------------------------------------------
 
 
-def test_a_verdict_always_shows_its_quote_and_link(client):
-    body = client.get("/claim/1").text
+def test_a_thread_shows_the_quote_and_the_link(client):
+    body = client.get("/s/1").text
     assert "Applicants must hold a degree." in body
     assert "https://cs.stanford.edu/admissions" in body
-    assert "primary" in body
 
 
-def test_an_unsettled_finding_shows_why(client):
-    body = client.get("/claim/1").text
-    assert "Could not settle this." in body
-    assert "the sources are silent" in body
+def test_reasoning_is_labelled_as_reasoning(client):
+    """Inference must never be mistaken for evidence."""
+    conn = main.connect()
+    sessions.add(conn, 1, "agent", "Some reasoning.", kind="assessment")
+    conn.close()
+    assert "reasoning, not evidence" in client.get("/s/1").text
 
 
-def test_a_missing_date_is_stated_not_hidden(client):
-    assert "does not say when it was last updated" in client.get("/claim/1").text
+def test_an_unprompted_message_is_marked_as_such(client):
+    conn = main.connect()
+    sessions.add(conn, 1, "agent", "The date moved.", kind="alert")
+    conn.close()
+    assert "arrived unprompted" in client.get("/s/1").text
 
 
-def test_the_claim_page_names_who_decides(client):
-    body = client.get("/claim/1").text
-    assert "Stanford" in body and "stanford.edu" in body
+# --- the dot ---------------------------------------------------------------
 
 
-# --- the funnel ------------------------------------------------------------
+def test_a_waiting_thread_shows_a_dot_in_the_panel(client):
+    conn = main.connect()
+    sessions.add(conn, 1, "agent", "The date moved.", kind="alert")
+    conn.close()
+    assert 'class="dot"' in client.get("/").text
 
 
-def test_the_funnel_shows_what_was_discarded(client):
-    body = client.get("/funnel/1").text
-    for n in ("50", "40", "412", "25", "2"):
-        assert n in body
-    assert "a query that was run" in body
-    assert "a hypothesis" in body
+def test_opening_the_thread_clears_the_dot(client):
+    conn = main.connect()
+    sessions.add(conn, 1, "agent", "The date moved.", kind="alert")
+    conn.close()
+    client.get("/s/1")
+    assert 'class="dot"' not in client.get("/").text
 
 
-def test_the_funnel_explains_itself_to_a_stranger(client):
-    body = client.get("/funnel/1").text
-    assert "invented before searching" in body
-    assert "word-for-word" in body
+# --- using it --------------------------------------------------------------
 
 
-# --- demo isolation, the part that is a correctness requirement ------------
-
-
-def test_personal_mode_lists_only_personal_claims(client):
+def test_the_front_page_is_an_empty_box(client):
     body = client.get("/").text
-    assert "A degree is required" in body
-    assert "A public example claim" not in body
+    assert 'action="/say"' in body
+    assert "<textarea" in body
+    assert "What are you planning?" in visible(body)
 
 
-def test_demo_mode_lists_only_demo_claims(client, monkeypatch):
+def test_saying_something_new_starts_a_thread(client):
+    r = client.post("/say", data={"message": "I am preparing for JEE in April."},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"].startswith("/s/")
+
+
+def test_a_follow_up_stays_in_the_same_thread(client):
+    r = client.post("/say", data={"message": "what did you mean?",
+                                  "session_id": "1"}, follow_redirects=False)
+    assert r.headers["location"] == "/s/1"
+    conn = main.connect()
+    assert any(m.body == "what did you mean?" for m in sessions.history(conn, 1))
+    conn.close()
+
+
+def test_an_empty_message_is_refused(client):
+    r = client.post("/say", data={"message": " "}, follow_redirects=False)
+    assert r.headers["location"] == "/"
+
+
+def test_the_thread_api_returns_only_new_messages(client):
+    data = client.get("/api/thread/1?after=1").json()
+    assert all(m["id"] > 1 for m in data["messages"])
+    assert data["progress"]["n_searches"] == 40
+
+
+# --- demo isolation, a correctness requirement ------------------------------
+
+
+def test_personal_threads_are_listed_in_personal_mode(client):
+    assert "A degree is required" in visible(client.get("/").text)
+
+
+def test_demo_mode_lists_only_demo_threads(client, monkeypatch):
     monkeypatch.setenv("FALSIFIER_DEMO", "1")
-    body = client.get("/").text
-    assert "A public example claim" in body
-    assert "A degree is required" not in body, "the demo must never show personal claims"
+    body = visible(client.get("/").text)
+    assert "A public example plan" in body
+    assert "A degree is required" not in body
 
 
-def test_demo_mode_cannot_open_a_personal_claim_by_id(client, monkeypatch):
-    """Guessing the URL must not work."""
+def test_demo_mode_cannot_open_a_personal_thread_by_id(client, monkeypatch):
     monkeypatch.setenv("FALSIFIER_DEMO", "1")
-    assert client.get("/claim/1").status_code == 404
+    assert client.get("/s/1").status_code == 404
     assert client.get("/funnel/1").status_code == 404
+    assert client.get("/api/thread/1").status_code == 404
 
 
 def test_demo_mode_says_it_is_a_demo(client, monkeypatch):
@@ -135,76 +179,64 @@ def test_health_reports_the_mode(client, monkeypatch):
     assert client.get("/health").json()["mode"] == "demo"
 
 
-# --- it must not fall over on an empty or missing thing --------------------
+# --- looking inside --------------------------------------------------------
 
 
-def test_an_unknown_claim_is_a_clean_404(client):
-    response = client.get("/claim/9999")
-    assert response.status_code == 404
-    assert "No such claim" in response.text
+def test_the_funnel_shows_what_was_discarded(client):
+    body = client.get("/funnel/1").text
+    for n in ("50", "40", "412", "25"):
+        assert n in body
+    assert "a query that was run" in body
+    assert "a hypothesis" in body
+
+
+def test_the_funnel_links_back_to_the_conversation(client):
+    assert 'href="/s/1"' in client.get("/funnel/1").text
+
+
+def test_an_unknown_thread_is_a_clean_404(client):
+    r = client.get("/s/9999")
+    assert r.status_code == 404
+    assert "Start a plan" in visible(r.text)
 
 
 def test_the_numbers_page_renders(client):
-    body = client.get("/numbers").text
-    assert "measured" in body or "planned" in body
+    assert "measured" in client.get("/numbers").text
 
 
-# ---------------------------------------------------------------------------
-# A visitor has to be able to use it, and the voice has to be right.
-# ---------------------------------------------------------------------------
-
-
-def test_a_visitor_can_enter_a_claim(client):
-    """The hard requirement: a judge must be able to run something."""
-    body = client.get("/").text
-    assert 'action="/check"' in body
-    assert "<textarea" in body
-
-
-def test_the_opening_explains_the_product_without_jargon(client):
-    body = client.get("/").text
-    assert "exam board moved the" in body, "the JEE story is the explanation"
-    assert "never tells you things you already know" in body
+# --- voice -----------------------------------------------------------------
 
 
 def test_the_copy_is_not_adversarial(client):
-    """The method is adversarial; the stance toward the user is not."""
-    for page in ("/", "/claim/1", "/funnel/1"):
+    for page in ("/", "/s/1", "/funnel/1"):
         body = visible(client.get(page).text).lower()
         assert "evidence that you are wrong" not in body, page
         assert "objection" not in body, page
         assert "falsification" not in body, page
 
 
-def test_status_words_are_plain_english(client):
+def test_the_old_report_framing_is_gone(client):
     body = visible(client.get("/").text)
-    assert "still true" in body
     assert "unsettled" not in body
     assert "unverifiable" not in body
 
 
-def test_a_very_short_claim_is_refused(client):
-    r = client.post("/check", data={"claim": "too short"}, follow_redirects=False)
-    assert r.status_code == 303
-    assert "error=short" in r.headers["location"]
+# --- markup safety ---------------------------------------------------------
 
 
-def test_the_watch_page_polls_for_progress(client):
-    body = client.get("/watch?claim=something").text
-    assert "/api/progress" in body
-    assert "ways it could be wrong" in body
+def test_markup_escapes_html():
+    assert "<script>" not in markup.render("<script>alert(1)</script>")
 
 
-def test_progress_reports_starting_for_an_unknown_claim(client):
-    assert client.get("/api/progress?claim=never+seen").json()["state"] == "starting"
+def test_markup_refuses_a_javascript_link():
+    """It may appear as text, but never as something clickable."""
+    out = markup.render("[x](javascript:alert(1))")
+    assert "<a " not in out
+    assert 'href="javascript' not in out
 
 
-def test_progress_reports_the_funnel_as_it_fills(client, tmp_path):
-    conn = db.connect(tmp_path / "t.db")
-    conn.execute("UPDATE runs SET stage = 'searching', n_searches = 7 WHERE id = 1")
-    conn.commit()
-    conn.close()
-    data = client.get("/api/progress?claim=A degree is required").json()
-    assert data["searches"] == 7
-    assert data["stage"] == "searching"
-    assert data["claim_id"] == 1
+def test_markup_keeps_the_marks_the_agent_uses():
+    out = markup.render("**bold**\n\n> quoted\n\n[a](https://example.edu)")
+    assert "<strong>bold</strong>" in out
+    assert "<blockquote>quoted</blockquote>" in out
+    assert 'href="https://example.edu"' in out

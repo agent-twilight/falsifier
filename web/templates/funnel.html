@@ -2,11 +2,12 @@
 {% block title %}Funnel — {{ claim.text[:50] }}{% endblock %}
 {% block body %}
 <h2>How this answer was reached</h2>
-<p class="meta">{{ claim.text }} · <a href="/claim/{{ claim.id }}">back to the answer</a></p>
+<p class="note">{{ claim.text }}{% if session_id %} · <a href="/s/{{ session_id }}">back to the conversation</a>{% endif %}</p>
 
 {% if run %}
+<div class="working" style="display:block">
 {% set widest = [run.n_results, run.n_hypotheses, 1] | max %}
-<div class="card">
+<div class="note">
   {% for label, n, note in [
       ('ways it could be wrong', run.n_hypotheses, 'invented before searching anything'),
       ('searches run', run.n_searches, 'aimed at the counter-case, not at your claim'),
@@ -14,14 +15,14 @@
       ('quotes verified', run.n_read, 'found word-for-word on the page they came from'),
       ('parts no longer true', run.n_survived, '')
   ] %}
-  <div class="funnel-step">
-    <span class="funnel-n">{{ n }}</span>
-    <span class="funnel-bar" style="width: {{ (n / widest * 60) | round | int }}%"></span>
-    <span class="funnel-label"><strong>{{ label }}</strong> — {{ note }}</span>
+  <div class="step">
+    <b>{{ n }}</b>
+    <span class="bar" style="width: {{ (n / widest * 45) | round | int }}%"></span>
+    <span><strong>{{ label }}</strong>{% if note %} — {{ note }}{% endif %}</span>
   </div>
   {% endfor %}
 </div>
-<p class="meta">
+<p class="note">
   Most of what it finds gets thrown away. A tool that shows only its
   answer is asking you to take its word for it.
 </p>
@@ -40,7 +41,7 @@
   </tr>
   {% endfor %}
 </table>
-<p class="meta">
+<p class="note">
   Thousands of cheap calls to produce a few sentences worth reading. The
   small model does the volume; the large one is used twice.
 </p>
@@ -51,14 +52,14 @@
 <table>
   <tr><th>ways your plan could be out of date</th><th class="num">searches</th><th class="num">evidence</th></tr>
   {% for h in hypotheses %}
-  <tr{% if not h.evidence %} class="retracted"{% endif %}>
+  <tr{% if not h.evidence %} class="nil"{% endif %}>
     <td>{{ h.text }}</td>
     <td class="num">{{ h.searches }}</td>
     <td class="num">{{ h.evidence }}</td>
   </tr>
   {% endfor %}
 </table>
-<p class="meta">Greyed rows found nothing, which is the normal outcome.</p>
+<p class="note">Greyed rows found nothing, which is the normal outcome.</p>
 {% endif %}
 
 {% if searches %}

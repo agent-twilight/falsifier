@@ -5,128 +5,219 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}The Falsifier{% endblock %}</title>
 <style>
+  /* Warm paper and ink rather than the usual cool grey-blue. The accent is
+     a muted clay, used sparingly, because almost everything on screen is
+     either a quote or a source and neither should shout. */
   :root {
-    --ink: #16161a;
-    --muted: #6b6b76;
-    --line: #e2e2e6;
-    --bg: #fbfbfc;
-    --card: #ffffff;
-    --challenge: #b3261e;
-    --support: #1e6b3a;
-    --unsettled: #8a6500;
-    --accent: #2f4f8f;
+    --paper:   #faf8f5;
+    --card:    #ffffff;
+    --ink:     #1c1a17;
+    --muted:   #6f6962;
+    --faint:   #9a938a;
+    --line:    #e6e1d9;
+    --clay:    #9c4221;
+    --moss:    #3f6212;
+    --amber:   #92700e;
+    --panel:   #f3efe8;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --ink: #e8e8ea; --muted: #9a9aa4; --line: #2c2c33;
-      --bg: #141417; --card: #1b1b20;
-      --challenge: #ef7a72; --support: #6cc38d; --unsettled: #d9ae4a;
-      --accent: #8fabe0;
+      --paper:  #15140f;
+      --card:   #1d1b16;
+      --ink:    #ece7dd;
+      --muted:  #a39b8f;
+      --faint:  #7c746a;
+      --line:   #2e2b24;
+      --clay:   #e8a08a;
+      --moss:   #a3c257;
+      --amber:  #d9b64a;
+      --panel:  #1a1813;
     }
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-  @media (min-width: 40rem) { .wrap { padding: 2rem 1.25rem 5rem; } }
-  header { border-bottom: 1px solid var(--line); margin-bottom: 2rem; }
-  header .wrap { padding-bottom: 1rem; padding-top: 1.5rem; }
-  h1 { font-size: 1.35rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
-  h2 { font-size: 1.05rem; margin: 2rem 0 .75rem; }
-  a { color: var(--accent); }
-  nav a { margin-right: 1rem; font-size: .9rem; }
-  .sub { color: var(--muted); font-size: .9rem; margin: 0; }
-  .card {
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 10px; padding: 1.1rem 1.25rem; margin-bottom: .9rem;
+  a { color: var(--clay); text-decoration-thickness: 1px;
+      text-underline-offset: 2px; }
+
+  /* ---- shell ---- */
+  .shell { display: flex; min-height: 100%; }
+  .panel {
+    width: 16.5rem; flex: 0 0 16.5rem; background: var(--panel);
+    border-right: 1px solid var(--line); padding: 1rem .75rem;
+    display: flex; flex-direction: column; gap: .35rem;
   }
-  .card h3 { margin: 0 0 .4rem; font-size: 1rem; font-weight: 600; }
-  blockquote {
-    margin: .8rem 0; padding: .7rem 1rem; border-left: 3px solid var(--line);
-    background: var(--bg); font-size: .95rem;
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .inner { width: 100%; max-width: 46rem; margin: 0 auto;
+           padding: 1.5rem 1.25rem 2rem; flex: 1; }
+
+  /* ---- side panel ---- */
+  .brand { font-weight: 650; font-size: .95rem; letter-spacing: -.01em;
+           padding: .2rem .5rem .6rem; color: var(--ink);
+           text-decoration: none; display: block; }
+  .brand small { display: block; font-weight: 400; font-size: .74rem;
+                 color: var(--faint); letter-spacing: 0; margin-top: .1rem; }
+  .newplan {
+    display: block; text-align: left; width: 100%; margin-bottom: .6rem;
+    padding: .5rem .6rem; border-radius: 7px; font-size: .88rem;
+    border: 1px solid var(--line); background: var(--card);
+    color: var(--ink); text-decoration: none; font-weight: 550;
   }
-  .tag {
-    display: inline-block; font-size: .72rem; font-weight: 600;
-    letter-spacing: .04em; text-transform: uppercase;
-    padding: .18rem .5rem; border-radius: 999px; border: 1px solid currentColor;
+  .panel-label { font-size: .68rem; text-transform: uppercase;
+                 letter-spacing: .07em; color: var(--faint);
+                 padding: .5rem .6rem .2rem; }
+  .thread {
+    display: flex; align-items: center; gap: .5rem; padding: .42rem .6rem;
+    border-radius: 7px; font-size: .86rem; color: var(--muted);
+    text-decoration: none; line-height: 1.35;
   }
-  .challenges { color: var(--challenge); }
-  .supports { color: var(--support); }
-  .unverifiable { color: var(--unsettled); }
-  .retracted { opacity: .55; }
-  .retracted .card { border-style: dashed; }
-  .meta { color: var(--muted); font-size: .84rem; }
-  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
-  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-weight: 600; font-size: .8rem;
-       text-transform: uppercase; letter-spacing: .04em; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  pre { overflow-x: auto; font-size: .82rem; line-height: 1.5;
-        background: var(--card); border: 1px solid var(--line);
-        border-radius: 8px; padding: 1rem; }
-  .banner {
-    background: var(--card); border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
-    padding: .7rem 1rem; border-radius: 6px; font-size: .88rem;
-    margin-bottom: 1.5rem; color: var(--muted);
+  .thread:hover { background: var(--card); color: var(--ink); }
+  .thread.on { background: var(--card); color: var(--ink); font-weight: 550;
+               box-shadow: inset 2px 0 0 var(--clay); }
+  .thread .t { flex: 1; min-width: 0; overflow: hidden;
+               text-overflow: ellipsis; white-space: nowrap; }
+  /* The whole product, in one pixel: the agent spoke without being asked. */
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--clay);
+         flex: 0 0 7px; }
+  .thread.unread { color: var(--ink); font-weight: 600; }
+  .pin { font-size: .7rem; color: var(--faint); }
+  .panel-foot { margin-top: auto; padding: .6rem; font-size: .78rem; }
+  .panel-foot a { color: var(--faint); display: block; margin-top: .25rem; }
+
+  /* ---- conversation ---- */
+  h1 { font-size: 1.5rem; margin: 0 0 .3rem; letter-spacing: -.02em;
+       font-weight: 600; }
+  h2 { font-size: 1rem; margin: 1.8rem 0 .6rem; letter-spacing: -.01em; }
+  .greet { padding: 3rem 0 1.5rem; }
+  .greet p { color: var(--muted); margin: 0; font-size: 1.02rem; }
+  .turn { margin: 0 0 1.1rem; }
+  .turn.user { display: flex; justify-content: flex-end; }
+  .turn.user .bubble {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px 14px 3px 14px; padding: .6rem .85rem;
+    max-width: 85%; font-size: .96rem;
   }
-  .empty { color: var(--muted); padding: 2rem 0; }
-  .funnel-step { display: flex; align-items: baseline; gap: .8rem; margin: .3rem 0; }
-  .funnel-bar { height: 10px; background: var(--accent); border-radius: 3px; opacity: .75; }
-  .funnel-n { font-variant-numeric: tabular-nums; min-width: 3.5rem;
-              text-align: right; font-weight: 600; }
-  .funnel-label { color: var(--muted); font-size: .88rem; }
-  @media (max-width: 34rem) {
-    .funnel-step { flex-wrap: wrap; }
-    .funnel-bar { order: 3; flex-basis: 100%; }
-    .funnel-label { font-size: .82rem; }
-    table { font-size: .82rem; }
-    th, td { padding: .4rem .35rem; }
-    blockquote { padding: .6rem .7rem; font-size: .9rem; }
+  .turn.agent .bubble { max-width: 100%; }
+  .bubble p { margin: 0 0 .7rem; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble blockquote {
+    margin: .7rem 0; padding: .55rem .9rem; font-size: .93rem;
+    border-left: 2px solid var(--clay); background: var(--panel);
+    border-radius: 0 6px 6px 0; color: var(--ink);
   }
-  .hero { margin-bottom: 1.75rem; }
-  .lede { font-size: 1.12rem; line-height: 1.55; margin: 0 0 .9rem;
-          letter-spacing: -.005em; }
-  .lede-sub { color: var(--muted); font-size: .96rem; margin: 0; }
-  .ask { margin: 0 0 .8rem; }
-  .ask label { display: block; font-size: .88rem; color: var(--muted);
-               margin-bottom: .4rem; }
+  .bubble ul { margin: .5rem 0; padding-left: 1.1rem; }
+  .bubble li { margin: .2rem 0; }
+  .bubble em { color: var(--muted); }
+  .kind {
+    display: inline-block; font-size: .66rem; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: .3rem;
+  }
+  .kind.alert { color: var(--clay); font-weight: 650; }
+  .turn.alert .bubble { border-left: 2px solid var(--clay);
+                        padding-left: .85rem; }
+
+  /* ---- the box ---- */
+  .ask { position: sticky; bottom: 0; background: var(--paper);
+         padding: .75rem 0 1.25rem; }
+  .ask form { display: flex; gap: .5rem; align-items: flex-end; }
   .ask textarea {
-    width: 100%; padding: .7rem .8rem; border-radius: 8px; resize: vertical;
-    border: 1px solid var(--line); background: var(--card); color: var(--ink);
-    font: inherit; font-size: 1rem;
+    flex: 1; resize: none; font: inherit; font-size: 1rem;
+    padding: .7rem .85rem; border-radius: 11px; color: var(--ink);
+    border: 1px solid var(--line); background: var(--card);
+    min-height: 2.9rem; max-height: 12rem;
   }
-  .ask-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
-             margin-top: .6rem; }
-  button {
-    font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px;
-    padding: .55rem 1.1rem; border: 1px solid var(--accent);
-    background: var(--accent); color: #fff;
+  .ask textarea:focus { outline: 2px solid var(--clay); outline-offset: -1px; }
+  button.send {
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px;
+    padding: .66rem 1.05rem; border: 1px solid var(--clay);
+    background: var(--clay); color: #fff;
   }
-  button.link {
-    background: none; border: none; color: var(--accent); padding: 0;
-    font-weight: 400; font-size: .84rem; text-decoration: underline;
-    text-align: left;
+  button.send:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--faint); font-size: .78rem; margin: .4rem .15rem 0; }
+
+  /* ---- working ---- */
+  .working { border: 1px solid var(--line); background: var(--card);
+             border-radius: 10px; padding: .85rem 1rem; margin-bottom: 1.1rem; }
+  .stage { font-size: .86rem; color: var(--muted); margin: 0 0 .5rem; }
+  .step { display: flex; align-items: baseline; gap: .6rem; margin: .15rem 0;
+          font-size: .84rem; color: var(--muted); }
+  .step b { font-variant-numeric: tabular-nums; min-width: 2.4rem;
+            text-align: right; color: var(--ink); font-weight: 600; }
+  .bar { height: 7px; background: var(--clay); opacity: .55; border-radius: 3px;
+         transition: width .4s ease; }
+
+  /* ---- tables, used only where looking inside ---- */
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  th, td { text-align: left; padding: .42rem .55rem;
+           border-bottom: 1px solid var(--line); }
+  th { color: var(--faint); font-weight: 600; font-size: .7rem;
+       text-transform: uppercase; letter-spacing: .06em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.nil td { color: var(--faint); }
+  .figures { font-family: ui-monospace, "SF Mono", Menlo, monospace;
+             font-size: .8rem; line-height: 1.55; white-space: pre;
+             overflow-x: auto; color: var(--ink); }
+  .note { color: var(--muted); font-size: .86rem; }
+  .banner { background: var(--card); border: 1px solid var(--line);
+            border-left: 2px solid var(--clay); padding: .6rem .85rem;
+            border-radius: 0 7px 7px 0; font-size: .85rem;
+            color: var(--muted); margin-bottom: 1.25rem; }
+
+  /* ---- phone ---- */
+  @media (max-width: 52rem) {
+    .shell { flex-direction: column; }
+    .panel {
+      width: 100%; flex: none; border-right: none;
+      border-bottom: 1px solid var(--line); flex-direction: row;
+      align-items: center; gap: .5rem; overflow-x: auto; padding: .6rem .7rem;
+    }
+    .panel-label, .panel-foot { display: none; }
+    .brand { padding: 0 .4rem 0 0; white-space: nowrap; }
+    .brand small { display: none; }
+    .newplan { width: auto; margin: 0; white-space: nowrap; }
+    .thread { white-space: nowrap; max-width: 11rem; }
+    .inner { padding: 1rem .9rem 1.5rem; }
+    .turn.user .bubble { max-width: 92%; }
   }
-  .examples { margin-bottom: 2rem; line-height: 1.9; }
 </style>
 </head>
 <body>
-<header><div class="wrap">
-  <h1><a href="/" style="color:inherit;text-decoration:none">The Falsifier</a></h1>
-  <p class="sub">Keeps your plans honest against a world that moves.</p>
-  <nav><a href="/">Check something</a><a href="/numbers">What it costs</a></nav>
-</div></header>
-<div class="wrap">
-{% if demo %}
-<div class="banner">
-  Public demo. Nothing personal is shown or kept here. Try a claim of your
-  own — it runs for real, against live sources.
-</div>
-{% endif %}
-{% block body %}{% endblock %}
+<div class="shell">
+  <nav class="panel">
+    <a class="brand" href="/">The Falsifier
+      <small>Keeps your plans honest against a world that moves</small></a>
+    <a class="newplan" href="/">＋ New plan</a>
+
+    {% if sessions %}
+    <div class="panel-label">Plans</div>
+    {% for s in sessions %}
+    <a class="thread {{ 'on' if session and s.id == session.id }} {{ 'unread' if s.has_news }}"
+       href="/s/{{ s.id }}">
+      {% if s.pinned %}<span class="pin">▪</span>{% endif %}
+      <span class="t">{{ s.title }}</span>
+      {% if s.has_news %}<span class="dot" title="something changed"></span>{% endif %}
+    </a>
+    {% endfor %}
+    {% endif %}
+
+    <div class="panel-foot">
+      <a href="/numbers">What it costs</a>
+    </div>
+  </nav>
+
+  <div class="main"><div class="inner">
+    {% if demo %}
+    <div class="banner">
+      Public demo. Nothing personal is shown or kept. Start a plan of your
+      own — it runs for real against live sources.
+    </div>
+    {% endif %}
+    {% block body %}{% endblock %}
+  </div></div>
 </div>
 </body>
 </html>

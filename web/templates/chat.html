@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ session.title if session else "The Falsifier" }}{% endblock %}
+{% block body %}
+
+{% if not session %}
+<div class="greet">
+  <h1>What are you planning?</h1>
+  <p>Tell me, and I will check whether it still holds up — then keep
+     watching, and say something when the world moves.</p>
+</div>
+{% else %}
+<h1>{{ session.title }}</h1>
+<p class="note">
+  Started {{ session.created_at[:10] }}
+  {% if session.claim_id %}
+    · <a href="/funnel/{{ session.claim_id }}">see how this was checked</a>
+  {% endif %}
+  · <form method="post" action="/s/{{ session.id }}/pin" style="display:inline">
+      <button class="send" style="background:none;border:none;color:var(--clay);padding:0;font-weight:400;font-size:.86rem">
+        {{ "unpin" if session.pinned else "pin" }}</button>
+    </form>
+</p>
+{% endif %}
+
+<div id="thread">
+{% for m in messages %}
+  <div class="turn {{ m.role }} {{ 'alert' if m.kind == 'alert' }}">
+    <div class="bubble">
+      {% if m.kind == 'alert' %}<span class="kind alert">arrived unprompted</span>{% endif %}
+      {% if m.kind == 'assessment' %}<span class="kind">reasoning, not evidence</span>{% endif %}
+      {{ m.body | md }}
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+<div class="working" id="working" style="display:none">
+  <p class="stage" id="stage">starting…</p>
+  {% for key, label in [('n_hypotheses','ways it could be out of date'),
+                        ('n_searches','searches run'),
+                        ('n_results','pages returned'),
+                        ('n_read','quotes verified against their page')] %}
+  <div class="step">
+    <b id="n-{{ key }}">0</b>
+    <span class="bar" id="bar-{{ key }}" style="width:0"></span>
+    <span>{{ label }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="ask">
+  <form method="post" action="/say" id="askform">
+    {% if session %}<input type="hidden" name="session_id" value="{{ session.id }}">{% endif %}
+    <textarea name="message" id="box" rows="1" required
+      placeholder="{{ 'Ask about this, or tell me something new…' if session else 'I am preparing for JEE in April, so I have about 100 days to revise.' }}"></textarea>
+    <button class="send" type="submit">Send</button>
+  </form>
+  <p class="hint">
+    {% if session %}Replies are quick. If it needs fresh evidence it will say so and go looking.
+    {% else %}The first check takes a minute or two. You will see the work as it happens.{% endif %}
+  </p>
+</div>
+
+<script>
+const box = document.getElementById("box");
+box.addEventListener("input", () => {
+  box.style.height = "auto";
+  box.style.height = Math.min(box.scrollHeight, 190) + "px";
+});
+box.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    if (box.value.trim()) document.getElementById("askform").requestSubmit();
+  }
+});
+box.focus();
+
+{% if session %}
+const SID = {{ session.id }};
+let last = {{ messages[-1].id if messages else 0 }};
+const thread = document.getElementById("thread");
+const working = document.getElementById("working");
+const keys = ["n_hypotheses", "n_searches", "n_results", "n_read"];
+let quiet = 0;
+
+function render(m) {
+  const d = document.createElement("div");
+  d.className = "turn " + m.role + (m.kind === "alert" ? " alert" : "");
+  const b = document.createElement("div");
+  b.className = "bubble";
+  let tag = "";
+  if (m.kind === "alert") tag = '<span class="kind alert">arrived unprompted</span>';
+  if (m.kind === "assessment") tag = '<span class="kind">reasoning, not evidence</span>';
+  // Server-rendered markdown is not available here, so keep it simple and
+  // safe: escape, then allow only the few marks the agent actually emits.
+  const esc = m.body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const html = esc
+    .replace(/^&gt; ?(.*)$/gm, "<blockquote>$1</blockquote>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/\[(.+?)\]\((https?:[^)]+)\)/g, '<a href="$2" rel="noopener">$1</a>')
+    .replace(/^- (.*)$/gm, "<li>$1</li>")
+    .split(/\n{2,}/).map(p => p.startsWith("<") ? p : "<p>" + p.replace(/\n/g, "<br>") + "</p>")
+    .join("");
+  b.innerHTML = tag + html;
+  d.appendChild(b);
+  thread.appendChild(d);
+}
+
+async function poll() {
+  try {
+    const r = await fetch(`/api/thread/${SID}?after=${last}`);
+    const d = await r.json();
+    for (const m of (d.messages || [])) { render(m); last = Math.max(last, m.id); }
+
+    const p = d.progress;
+    if (d.working) {
+      working.style.display = "block";
+      if (p) {
+        document.getElementById("stage").textContent = p.stage || "working…";
+        const widest = Math.max(1, ...keys.map(k => p[k] || 0));
+        for (const k of keys) {
+          document.getElementById("n-" + k).textContent = p[k] || 0;
+          document.getElementById("bar-" + k).style.width =
+            Math.round(((p[k] || 0) / widest) * 45) + "%";
+        }
+      }
+      quiet = 0;
+    } else {
+      working.style.display = "none";
+      if (++quiet > 20) return;   // settled; stop polling
+    }
+  } catch (e) { /* a dropped poll is not a failure */ }
+  setTimeout(poll, 2500);
+}
+poll();
+{% endif %}
+</script>
+{% endblock %}

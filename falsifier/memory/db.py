@@ -181,6 +181,44 @@ CREATE TABLE IF NOT EXISTS calls (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- A conversation about one plan. Separate sessions for separate plans,
+-- because a plan is a long-lived thing that gets revisited, not a query.
+--
+-- `unread` is what makes this product different from a chat app: the agent
+-- can speak without being spoken to, and the session it spoke in gets a
+-- dot in the side panel. A general assistant only ever replies.
+CREATE TABLE IF NOT EXISTS sessions (
+    id              INTEGER PRIMARY KEY,
+    title           TEXT NOT NULL DEFAULT 'New plan',
+    mode            TEXT NOT NULL DEFAULT 'personal'
+                    CHECK (mode IN ('personal', 'demo')),
+    claim_id        INTEGER REFERENCES claims(id) ON DELETE SET NULL,
+    pinned          INTEGER NOT NULL DEFAULT 0,
+    unread          INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    last_message_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Every turn, from either side. `kind` separates what the agent said from
+-- what it can prove: a 'finding' carries a citation, an 'assessment' is
+-- labelled reasoning, an 'alert' arrived unprompted.
+CREATE TABLE IF NOT EXISTS messages (
+    id          INTEGER PRIMARY KEY,
+    session_id  INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    role        TEXT NOT NULL CHECK (role IN ('user', 'agent')),
+    kind        TEXT NOT NULL DEFAULT 'text'
+                CHECK (kind IN ('text', 'finding', 'assessment', 'alert',
+                                'status')),
+    body        TEXT NOT NULL,
+    run_id      INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_session
+    ON messages(session_id, id);
+CREATE INDEX IF NOT EXISTS idx_sessions_recent
+    ON sessions(mode, last_message_at DESC);
+
 -- Falsification routines: how to attack a *class* of claim. Three are
 -- built in; the rest are written by the agent when it meets a domain it
 -- has no routine for, and reused from then on. Data, not code, so a new
@@ -231,7 +269,7 @@ CREATE INDEX IF NOT EXISTS idx_searches_query ON searches(query);
 TABLES = (
     "claims", "runs", "sub_claims", "hypotheses", "searches",
     "results", "evidence", "findings", "calls", "sources",
-    "claim_authorities", "routines",
+    "claim_authorities", "routines", "sessions", "messages",
 )
 
 

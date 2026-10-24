@@ -29,7 +29,7 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 from falsifier import config
-from falsifier.memory import db
+from falsifier.memory import db, sessions
 from falsifier.pipeline import freshness
 
 
@@ -361,6 +361,38 @@ def research(conn: sqlite3.Connection, max_credits: int | None = None) -> DayRes
     return result
 
 
+def _speak_in_threads(conn: sqlite3.Connection, changes: list[Change]) -> None:
+    """Add an unprompted message to the thread each change belongs to.
+
+    Marked kind='alert', which is what sets the thread unread and puts the
+    dot in the side panel. A general assistant cannot do this; it only ever
+    answers.
+    """
+    for change in changes:
+        row = conn.execute(
+            "SELECT id FROM sessions WHERE claim_id IN "
+            "(SELECT claim_id FROM findings WHERE id = ?) "
+            "ORDER BY id DESC LIMIT 1",
+            (change.finding_id,),
+        ).fetchone() if change.finding_id else None
+
+        if row is None:
+            row = conn.execute(
+                "SELECT s.id FROM sessions s JOIN claims c ON c.id = s.claim_id "
+                "WHERE c.text = ? ORDER BY s.id DESC LIMIT 1",
+                (change.claim,),
+            ).fetchone()
+        if row is None:
+            continue
+
+        body = (
+            f"**{change.describe()}**\n\n"
+            f"What I had told you: {change.statement}\n\n"
+            f"[{change.url}]({change.url})"
+        )
+        sessions.add(conn, row["id"], "agent", body, kind="alert")
+
+
 # --------------------------------------------------------------------------
 # The loop
 # --------------------------------------------------------------------------
@@ -389,8 +421,12 @@ def run_once(
             result.errors.extend(weekly.errors)
             result.credits_spent += weekly.credits_spent
 
-        if notify and result.changes:  # silence is the default outcome
-            send(compose(result.changes))
+        if result.changes:
+            # In-thread first: the dot in the panel is the product. Telegram
+            # is how you find out while away from the app.
+            _speak_in_threads(connection, result.changes)
+            if notify:
+                send(compose(result.changes))
         return result
     finally:
         if owned:

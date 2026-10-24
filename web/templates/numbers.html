@@ -2,10 +2,10 @@
 {% block title %}Numbers{% endblock %}
 {% block body %}
 <h2>What one check costs</h2>
-<p class="meta">
+<p class="note">
   Every row marked <strong>measured</strong> comes from logged calls, not an
   estimate. Rows marked <strong>planned</strong> have not run enough times yet
   and say so.
 </p>
-<pre>{{ table }}</pre>
+<div class="figures">{{ table }}</div>
 {% endblock %}
