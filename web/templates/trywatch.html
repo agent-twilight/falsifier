@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}See the watching work{% endblock %}
+{% block body %}
+<h1>See the watching work</h1>
+<p class="note">
+  The useful part of this only shows itself when the world changes, which
+  you cannot wait around for. So here is a page under our control that you
+  can change yourself.
+</p>
+
+<h2>Three steps</h2>
+<div class="working" style="display:block">
+  <div class="step"><b>1</b><span>
+    Open the <a href="/notice">examination notice</a>. It says the exam is
+    on <strong>{{ date }}</strong>.</span></div>
+  <div class="step"><b>2</b><span>
+    Change the date on that page and publish it. You are now the exam board.</span></div>
+  <div class="step"><b>3</b><span>
+    Ask here: <em>the exam is on {{ date }}</em>. The agent cites the notice.
+    Then change the date again and watch it withdraw what it told you.</span></div>
+</div>
+
+<h2>What is real and what is not</h2>
+<p class="note">
+  Only who moved the date is fake. The citation, the word-for-word check
+  that the quoted line is really on the page, the re-check that notices it
+  has gone, the withdrawal with its reason and timestamp, and the message
+  that arrives unprompted in the thread — all of that is the same code that
+  runs against Stanford and the real exam board.
+</p>
+<p class="note">
+  {% if changed %}The notice has been changed from its original date, so a
+  finding quoting the old date would now be withdrawn.
+  {% else %}The notice is currently unchanged.{% endif %}
+</p>
+{% endblock %}

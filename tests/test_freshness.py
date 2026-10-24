@@ -95,3 +95,51 @@ def test_recently_changed_pages_are_rechecked_sooner():
 
 def test_unknown_tier_still_gets_a_schedule():
     assert freshness.next_check_days("something-else") > 0
+
+
+# ---------------------------------------------------------------------------
+# Servers that refuse HEAD. Found on 24 Oct: a page returning 405 was never
+# re-verified at all, so a real change would have gone unnoticed.
+# ---------------------------------------------------------------------------
+
+
+def test_falls_back_to_get_when_head_is_refused(monkeypatch):
+    calls = []
+
+    def head(url, **kwargs):
+        calls.append("head")
+        return types.SimpleNamespace(status_code=405, headers={}, text="")
+
+    def get(url, **kwargs):
+        calls.append("get")
+        return types.SimpleNamespace(
+            status_code=206,
+            headers={"Last-Modified": "Wed, 14 Oct 2026 18:45:21 GMT"},
+            text="", close=lambda: None)
+
+    monkeypatch.setattr(freshness.requests, "head", head)
+    monkeypatch.setattr(freshness.requests, "get", get)
+
+    state = freshness.check("https://example.gov/notice")
+    assert calls == ["head", "get"]
+    assert state.reachable, "a server refusing HEAD must still be checkable"
+    assert state.last_modified is not None
+
+
+def test_a_ranged_get_counts_as_reachable():
+    state = freshness.PageState(url="u", status=206)
+    assert state.reachable
+
+
+def test_a_genuine_404_is_not_retried_as_a_get(monkeypatch):
+    calls = []
+
+    def head(url, **kwargs):
+        calls.append("head")
+        return types.SimpleNamespace(status_code=404, headers={}, text="")
+
+    monkeypatch.setattr(freshness.requests, "head", head)
+    monkeypatch.setattr(freshness.requests, "get",
+                        lambda *a, **k: pytest.fail("404 needs no fallback"))
+    assert freshness.check("https://example.gov/gone").gone
+    assert calls == ["head"]

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examination Notice</title>
+<style>
+ body{font:16px/1.7 Georgia,'Times New Roman',serif;max-width:40rem;
+      margin:3rem auto;padding:0 1.25rem;color:#1a1a1a;background:#fffef9}
+ h1{font-size:1.1rem;letter-spacing:.06em;text-transform:uppercase;
+    border-bottom:2px solid #1a1a1a;padding-bottom:.5rem}
+ .ref{color:#666;font-size:.82rem}
+ .date{font-weight:700}
+ form{margin-top:3rem;padding-top:1rem;border-top:1px dashed #bbb;
+      font-family:system-ui,sans-serif;font-size:.85rem;color:#555}
+ input{font:inherit;padding:.4rem;border:1px solid #bbb;border-radius:4px}
+ button{font:inherit;padding:.4rem .8rem;border:1px solid #9c4221;
+        background:#9c4221;color:#fff;border-radius:4px;cursor:pointer}
+</style></head><body>
+<h1>Notice to Candidates</h1>
+<p class="ref">Ref. NTC/2026/0417 &middot; Office of the Examination Board</p>
+<p>Candidates are hereby informed that the written examination for the
+2026 cycle will be conducted on <span class="date">{{ date }}</span> at
+all designated centres.</p>
+<p>Candidates must report to their allotted centre no later than one hour
+before the commencement of the paper. Admit cards will be made available
+for download fourteen days prior to the examination.</p>
+<p class="ref">This notice supersedes all previous communications.</p>
+
+<form method="post" action="/notice">
+  <p><strong>This page exists so you can change it.</strong>
+  Edit the date and the agent watching this page will notice at its next
+  check. Nothing else about the detection is simulated.</p>
+  <input name="date" value="{{ date }}" aria-label="examination date">
+  <button type="submit">Publish change</button>
+  {% if changed %}<p>Changed from the original. The agent's quoted line no
+  longer appears on this page.</p>{% endif %}
+</form>
+</body></html>

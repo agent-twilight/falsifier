@@ -57,7 +57,8 @@ class PageState:
 
     @property
     def reachable(self) -> bool:
-        return self.error is None and self.status == 200
+        # 206 is a ranged GET, used when a server refuses HEAD.
+        return self.error is None and self.status in (200, 206)
 
     @property
     def gone(self) -> bool:
@@ -114,6 +115,19 @@ def check(url: str, *, known_etag: str | None = None) -> PageState:
         response = requests.head(
             url, headers=headers, timeout=TIMEOUT, allow_redirects=True
         )
+        # Plenty of servers refuse HEAD: 405 Method Not Allowed, or 403, or
+        # a 5xx from a framework that never wired it up. Treating that as
+        # "could not check" means a source is never re-verified at all, so
+        # fall back to a ranged GET, which every server answers.
+        if response.status_code in (403, 405, 501) or response.status_code >= 500:
+            response = requests.get(
+                url,
+                headers={**headers, "Range": "bytes=0-2047"},
+                timeout=TIMEOUT,
+                allow_redirects=True,
+                stream=True,
+            )
+            response.close()
     except requests.RequestException as exc:
         return PageState(url, 0, checked_at=now, error=type(exc).__name__)
 

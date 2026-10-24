@@ -16,10 +16,18 @@ It is not a reminder app. It never tells you things you already know. "Study
 chemistry today" is your own plan read back at you. "The exam date moved" is
 information you could not have had.
 
-**Try it: [falsifier.onrender.com](https://falsifier.onrender.com)** — type a
-claim of your own and watch it work. It runs for real against live sources,
-takes a minute or two, and shows every search it ran and every result it
-threw away. Two worked examples are there already.
+**Try it: [falsifier.onrender.com](https://falsifier.onrender.com)** — tell it
+what you are planning and watch it work. It runs for real against live
+sources, takes a minute or two, and shows every search it ran and every
+result it threw away. Worked examples are there already.
+
+**See the watching work: [/try-the-watch](https://falsifier.onrender.com/try-the-watch)**
+— the useful part only shows itself when the world changes, which you cannot
+wait around for. So there is a mock examination notice there that *you* can
+edit. Change the date, and the agent withdraws what it told you, with the
+reason and the timestamp. Only who moved the date is fake; the citation, the
+word-for-word check, the withdrawal and the unprompted message are the same
+code that runs against Stanford.
 
 > On a free host it sleeps after fifteen minutes idle, so the first load may
 > take about fifty seconds.
@@ -48,10 +56,16 @@ Give it a claim. It:
    - **no longer true** — with the exact line that contradicts it
    - **couldn't be checked** — and precisely why, including what you would
      need to supply
-6. **Keeps watching.** Every cited source is re-checked daily, free. Once a
-   week it searches again for developments that did not exist before. When a
-   quoted line disappears from the page it rested on, the finding is
-   **withdrawn** with the date and reason, and you get a message.
+6. **Keeps watching, and speaks first.** Every cited source is re-checked
+   daily, free. Once a week it searches again for developments that did not
+   exist before. When a quoted line disappears from the page it rested on,
+   the finding is **withdrawn** with the date and reason — and the thread it
+   belongs to lights up in the side panel, exactly as a messaging app does,
+   with a message that arrived without you asking.
+
+   That last part is the whole difference. A general assistant answers when
+   asked and forgets. A plan you have not opened in a week can be waiting
+   here with something you needed to know.
 
 ### A real example from the register
 

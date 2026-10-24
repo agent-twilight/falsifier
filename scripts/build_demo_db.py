@@ -88,6 +88,19 @@ def copy_claim(src: sqlite3.Connection, dst: sqlite3.Connection, claim_id: int) 
     copy_table("calls",
                "run_id IN (SELECT id FROM runs WHERE claim_id = ?)", (claim_id,))
 
+    # The conversation itself. Without it the demo opens on an empty panel
+    # and a visitor cannot see what a finished thread looks like.
+    for row in src.execute("SELECT * FROM sessions WHERE claim_id = ?", (claim_id,)):
+        dst.execute(
+            "INSERT INTO sessions (id, title, mode, claim_id, pinned, unread, "
+            "created_at, last_message_at) VALUES (?, ?, 'demo', ?, ?, 0, ?, ?)",
+            (row["id"], row["title"], row["claim_id"], row["pinned"],
+             row["created_at"], row["last_message_at"]),
+        )
+    copy_table("messages",
+               "session_id IN (SELECT id FROM sessions WHERE claim_id = ?)",
+               (claim_id,))
+
     findings = dst.execute(
         "SELECT count(*) FROM findings WHERE claim_id = ?", (claim_id,)
     ).fetchone()[0]
@@ -107,13 +120,19 @@ def main(claim_ids: list[int]) -> int:
     copied = sum(copy_claim(src, dst, cid) for cid in claim_ids)
     dst.commit()
 
-    leaked = dst.execute("SELECT count(*) FROM claims WHERE mode != 'demo'").fetchone()[0]
-    if leaked:
-        raise SystemExit(f"ABORT: {leaked} non-demo claims ended up in the demo file")
+    for table in ("claims", "sessions"):
+        leaked = dst.execute(
+            f"SELECT count(*) FROM {table} WHERE mode != 'demo'"
+        ).fetchone()[0]
+        if leaked:
+            raise SystemExit(
+                f"ABORT: {leaked} non-demo rows in {table} of the demo file"
+            )
 
     totals = {
         t: dst.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
-        for t in ("claims", "findings", "evidence", "searches", "calls")
+        for t in ("claims", "findings", "evidence", "searches", "calls",
+                  "sessions", "messages")
     }
     print(f"\n{copied} claims copied. Rows: " +
           ", ".join(f"{k} {v}" for k, v in totals.items()))
