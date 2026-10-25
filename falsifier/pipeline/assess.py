@@ -74,7 +74,7 @@ them:
 
 Rules:
 
-- Write to them, as a person. Short sentences. No "the assumption cannot
+- Write to them the way a well-informed friend would, not the way a report would. Short sentences. Contractions are fine. No "the assumption cannot
   be verified", no "it is important to note", no bullet-point
   throat-clearing. If you would not say it out loud to a friend who asked,
   do not write it.

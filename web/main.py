@@ -36,6 +36,22 @@ from web import markup
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 TEMPLATES.env.filters["md"] = lambda text: Markup(markup.render(text))
+# Rendered server-side as a fallback; the page rewrites these into local
+# time, because the database stores UTC.
+TEMPLATES.env.filters["when"] = lambda stamp: (stamp or "")[:16]
+
+
+def greeting() -> str:
+    """Addressed to a person, with their name if they told us one."""
+    from datetime import datetime
+
+    hour = datetime.now().hour
+    part = ("Good morning" if hour < 12
+            else "Good afternoon" if hour < 18 else "Good evening")
+    name = (os.getenv("USER_NAME") or "").strip().split(" ")[0]
+    if demo_mode() or not name:
+        return "What are you planning?"
+    return f"{part}, {name}. What are you planning?"
 
 app = FastAPI(title="The Falsifier", docs_url=None, redoc_url=None)
 
@@ -75,7 +91,8 @@ def home(request: Request):
     conn = connect()
     try:
         return TEMPLATES.TemplateResponse(request, "chat.html", _ctx(
-            request, conn, {"session": None, "messages": [], "run": None}))
+            request, conn, {"session": None, "messages": [], "run": None,
+                            "greeting": greeting()}))
     finally:
         conn.close()
 
@@ -103,7 +120,7 @@ def thread(request: Request, session_id: int):
             request, conn, {
                 "session": session,
                 "messages": sessions.history(conn, session_id),
-                "run": run,
+                "run": run, "greeting": greeting(),
             }))
     finally:
         conn.close()
@@ -143,9 +160,10 @@ def _investigate(claim_text: str, session_id: int, run_mode: str) -> None:
         conn.commit()
 
         for v in result.report.verdicts:
-            label = {"challenges": "This part no longer holds",
-                     "supports": "This part still holds"}.get(
-                         v.stance, "I could not settle this")
+            label = {
+                "challenges": "This bit does not hold up",
+                "supports": "This bit checks out",
+            }.get(v.stance, "I could not pin this one down")
             body = f"**{label}.** {v.statement}"
             if v.evidence:
                 body += (f"\n\n> {v.evidence.quote}\n\n"
@@ -171,14 +189,17 @@ def _investigate(claim_text: str, session_id: int, run_mode: str) -> None:
 
         if not result.report.verdicts:
             sessions.add(conn, session_id, "agent",
-                         "I could not retrieve anything that bears on this "
-                         "either way. That is not the same as it being true.",
+                         "I came up empty on this one — nothing I found "
+                         "speaks to it either way. Worth saying that is not "
+                         "the same as it being fine. If you can tell me more "
+                         "about your situation I can have another go.",
                          kind="text", run_id=result.run_id)
 
         artifact.write(result)
     except Exception as exc:  # noqa: BLE001 - say so in the thread, never 500
         sessions.add(conn, session_id, "agent",
-                     f"That check stopped early: {exc}", kind="text")
+                     f"Sorry — that one stopped partway through: {exc}. "
+                     "Ask me again and I will have another go.", kind="text")
     finally:
         conn.close()
 

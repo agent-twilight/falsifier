@@ -89,7 +89,7 @@ def test_an_unprompted_message_is_marked_as_such(client):
     conn = main.connect()
     sessions.add(conn, 1, "agent", "The date moved.", kind="alert")
     conn.close()
-    assert "arrived unprompted" in client.get("/s/1").text
+    assert "came to you" in client.get("/s/1").text
 
 
 # --- the dot ---------------------------------------------------------------

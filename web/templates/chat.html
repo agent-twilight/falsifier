@@ -4,19 +4,19 @@
 
 {% if not session %}
 <div class="greet">
-  <h1>What are you planning?</h1>
-  <p>Tell me, and I will check whether it still holds up — then keep
-     watching, and say something when the world moves.</p>
+  <h1>{{ greeting }}</h1>
+  <p>Tell me what you are planning. I will check whether it still holds up,
+     then keep an eye on it and say something when the world moves.</p>
 </div>
 {% else %}
 <h1>{{ session.title }}</h1>
 <p class="note">
-  Started {{ session.created_at[:10] }}
+  Started {{ session.created_at[:16] }}
   {% if session.claim_id %}
-    · <a href="/funnel/{{ session.claim_id }}">see how this was checked</a>
+    · <a href="/funnel/{{ session.claim_id }}">see how I checked this</a>
   {% endif %}
   · <form method="post" action="/s/{{ session.id }}/pin" style="display:inline">
-      <button class="send" style="background:none;border:none;color:var(--clay);padding:0;font-weight:400;font-size:.86rem">
+      <button class="fold" style="font-size:.86rem;color:var(--clay);padding:0">
         {{ "unpin" if session.pinned else "pin" }}</button>
     </form>
 </p>
@@ -26,20 +26,23 @@
 {% for m in messages %}
   <div class="turn {{ m.role }} {{ 'alert' if m.kind == 'alert' }}">
     <div class="bubble">
-      {% if m.kind == 'alert' %}<span class="kind alert">arrived unprompted</span>{% endif %}
-      {% if m.kind == 'assessment' %}<span class="kind">reasoning, not evidence</span>{% endif %}
+      {% if m.kind == 'alert' %}<span class="kind alert">came to you</span>{% endif %}
+      {% if m.kind == 'assessment' %}<span class="kind">my reasoning, not evidence</span>{% endif %}
       {{ m.body | md }}
+      <div class="stamp">{{ m.created_at | when }}</div>
     </div>
   </div>
 {% endfor %}
 </div>
 
+<div class="typing" id="typing" style="display:none"><i></i><i></i><i></i></div>
+
 <div class="working" id="working" style="display:none">
-  <p class="stage" id="stage">starting…</p>
-  {% for key, label in [('n_hypotheses','ways it could be out of date'),
+  <p class="stage" id="stage">just a moment…</p>
+  {% for key, label in [('n_hypotheses','ways this could be out of date'),
                         ('n_searches','searches run'),
                         ('n_results','pages returned'),
-                        ('n_read','quotes verified against their page')] %}
+                        ('n_read','quotes checked against their page')] %}
   <div class="step">
     <b id="n-{{ key }}">0</b>
     <span class="bar" id="bar-{{ key }}" style="width:0"></span>
@@ -52,17 +55,20 @@
   <form method="post" action="/say" id="askform">
     {% if session %}<input type="hidden" name="session_id" value="{{ session.id }}">{% endif %}
     <textarea name="message" id="box" rows="1" required
-      placeholder="{{ 'Ask about this, or tell me something new…' if session else 'I am preparing for JEE in April, so I have about 100 days to revise.' }}"></textarea>
-    <button class="send" type="submit">Send</button>
+      placeholder="{{ 'Ask me anything about this, or tell me something new…' if session else 'I am preparing for JEE in April, so I have about 100 days to revise.' }}"></textarea>
+    <button class="send" type="submit" id="sendbtn">Send</button>
   </form>
-  <p class="hint">
-    {% if session %}Replies are quick. If it needs fresh evidence it will say so and go looking.
-    {% else %}The first check takes a minute or two. You will see the work as it happens.{% endif %}
+  <p class="hint" id="hint">
+    {% if session %}Quick answers come straight back. If I need to go and look something up, I will say so.
+    {% else %}The first check takes about a minute. You can watch me work.{% endif %}
   </p>
 </div>
 
 <script>
 const box = document.getElementById("box");
+const sendbtn = document.getElementById("sendbtn");
+const form = document.getElementById("askform");
+
 box.addEventListener("input", () => {
   box.style.height = "auto";
   box.style.height = Math.min(box.scrollHeight, 190) + "px";
@@ -70,18 +76,49 @@ box.addEventListener("input", () => {
 box.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    if (box.value.trim()) document.getElementById("askform").requestSubmit();
+    if (!sendbtn.disabled && box.value.trim()) form.requestSubmit();
   }
 });
 box.focus();
+
+function clock(iso) {
+  // Stored as UTC without a zone marker; show it in local time.
+  const d = new Date((iso || "").replace(" ", "T") + "Z");
+  if (isNaN(d)) return "";
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+  return sameDay ? time
+    : d.toLocaleDateString([], {day: "numeric", month: "short"}) + ", " + time;
+}
+document.querySelectorAll(".stamp").forEach(el => {
+  const pretty = clock(el.dataset.at || el.textContent.trim());
+  if (pretty) el.textContent = pretty;
+});
 
 {% if session %}
 const SID = {{ session.id }};
 let last = {{ messages[-1].id if messages else 0 }};
 const thread = document.getElementById("thread");
 const working = document.getElementById("working");
+const typing = document.getElementById("typing");
+const hint = document.getElementById("hint");
 const keys = ["n_hypotheses", "n_searches", "n_results", "n_read"];
-let quiet = 0;
+let settled = 0;
+let busy = false;
+
+function setBusy(on) {
+  if (busy === on) return;
+  busy = on;
+  typing.style.display = on ? "flex" : "none";
+  sendbtn.disabled = on;
+  sendbtn.textContent = on ? "Working…" : "Send";
+  sendbtn.classList.toggle("stopping", on);
+  box.placeholder = on
+    ? "I am still working on the last one…"
+    : "Ask me anything about this, or tell me something new…";
+  if (on) hint.textContent = "I will add to the thread as soon as I have something.";
+}
 
 function render(m) {
   const d = document.createElement("div");
@@ -89,10 +126,8 @@ function render(m) {
   const b = document.createElement("div");
   b.className = "bubble";
   let tag = "";
-  if (m.kind === "alert") tag = '<span class="kind alert">arrived unprompted</span>';
-  if (m.kind === "assessment") tag = '<span class="kind">reasoning, not evidence</span>';
-  // Server-rendered markdown is not available here, so keep it simple and
-  // safe: escape, then allow only the few marks the agent actually emits.
+  if (m.kind === "alert") tag = '<span class="kind alert">came to you</span>';
+  if (m.kind === "assessment") tag = '<span class="kind">my reasoning, not evidence</span>';
   const esc = m.body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const html = esc
     .replace(/^&gt; ?(.*)$/gm, "<blockquote>$1</blockquote>")
@@ -102,9 +137,11 @@ function render(m) {
     .replace(/^- (.*)$/gm, "<li>$1</li>")
     .split(/\n{2,}/).map(p => p.startsWith("<") ? p : "<p>" + p.replace(/\n/g, "<br>") + "</p>")
     .join("");
-  b.innerHTML = tag + html;
+  b.innerHTML = tag + html +
+    '<div class="stamp">' + clock(m.created_at) + "</div>";
   d.appendChild(b);
   thread.appendChild(d);
+  d.scrollIntoView({behavior: "smooth", block: "nearest"});
 }
 
 async function poll() {
@@ -113,26 +150,29 @@ async function poll() {
     const d = await r.json();
     for (const m of (d.messages || [])) { render(m); last = Math.max(last, m.id); }
 
+    setBusy(!!d.working);
     const p = d.progress;
-    if (d.working) {
+    if (d.working && p) {
       working.style.display = "block";
-      if (p) {
-        document.getElementById("stage").textContent = p.stage || "working…";
-        const widest = Math.max(1, ...keys.map(k => p[k] || 0));
-        for (const k of keys) {
-          document.getElementById("n-" + k).textContent = p[k] || 0;
-          document.getElementById("bar-" + k).style.width =
-            Math.round(((p[k] || 0) / widest) * 45) + "%";
-        }
+      document.getElementById("stage").textContent = p.stage || "working…";
+      const widest = Math.max(1, ...keys.map(k => p[k] || 0));
+      for (const k of keys) {
+        document.getElementById("n-" + k).textContent = p[k] || 0;
+        document.getElementById("bar-" + k).style.width =
+          Math.round(((p[k] || 0) / widest) * 45) + "%";
       }
-      quiet = 0;
-    } else {
+      settled = 0;
+    } else if (!d.working) {
       working.style.display = "none";
-      if (++quiet > 20) return;   // settled; stop polling
+      if (++settled > 20) return;   // nothing happening; stop polling
     }
   } catch (e) { /* a dropped poll is not a failure */ }
-  setTimeout(poll, 2500);
+  setTimeout(poll, busy ? 1500 : 3000);
 }
+
+// Sending puts it straight into "working", so the dots appear at once
+// rather than after the first poll.
+form.addEventListener("submit", () => { setBusy(true); });
 poll();
 {% endif %}
 </script>

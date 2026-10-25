@@ -22,6 +22,7 @@ the default outcome of a day's work is no message at all.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -45,12 +46,11 @@ class Change:
     detail: str
 
     def describe(self) -> str:
-        headline = {
-            "retracted": "An objection no longer holds",
-            "source_gone": "A source has disappeared",
-            "source_changed": "A source changed",
+        return {
+            "retracted": "something I told you has stopped being true",
+            "source_gone": "a page I was relying on has disappeared",
+            "source_changed": "there is something new on this",
         }[self.kind]
-        return f"{headline}: {self.detail}"
 
 
 @dataclass
@@ -385,10 +385,28 @@ def _speak_in_threads(conn: sqlite3.Connection, changes: list[Change]) -> None:
         if row is None:
             continue
 
+        name = (os.getenv("USER_NAME") or "").strip().split(" ")[0]
+        hello = f"Hi {name} — " if name else "Hi — "
+        opener = {
+            "retracted": (
+                "I have been keeping an eye on this one, and something I "
+                "told you has stopped being true."),
+            "source_gone": (
+                "I have been keeping an eye on this one, and the page I was "
+                "relying on has gone."),
+            "source_changed": (
+                "I have been keeping an eye on this one, and something new "
+                "has turned up."),
+        }[change.kind]
+
         body = (
-            f"**{change.describe()}**\n\n"
-            f"What I had told you: {change.statement}\n\n"
-            f"[{change.url}]({change.url})"
+            f"{hello}{opener}\n\n"
+            f"Here is what I had told you:\n\n"
+            f"> {change.statement}\n\n"
+            f"That came from this page, and it does not say that any more: "
+            f"[{change.url}]({change.url})\n\n"
+            f"Worth a look yourself, in case it changes what you were "
+            f"planning. Say the word and I will dig into what replaced it."
         )
         sessions.add(conn, row["id"], "agent", body, kind="alert")
 
