@@ -32,7 +32,7 @@ from markupsafe import Markup
 
 from falsifier import config, report
 from falsifier.memory import db, sessions
-from web import markup
+from web import markup, watchroutes
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 TEMPLATES.env.filters["md"] = lambda text: Markup(markup.render(text))
@@ -454,44 +454,10 @@ def numbers(request: Request):
 
 
 # --------------------------------------------------------------------------
-# A page a judge can change, so the watching is inspectable
+# The watch a judge can set off themselves. Kept in its own module so the
+# demo scaffolding does not clutter the product.
 # --------------------------------------------------------------------------
-#
-# The hard part of evaluating this product is that its selling point only
-# shows itself when the world changes, which a judge cannot wait for. So
-# this serves a page under our own control, with a real date on it, that
-# anyone can edit. Cite it, change it, re-check it: the retraction that
-# follows runs through exactly the same machinery as a real one. Nothing
-# here is simulated except who moved the date.
-
-NOTICE_DEFAULT = "14 April 2026"
-_notice = {"date": NOTICE_DEFAULT}
-
-
-@app.get("/notice", response_class=HTMLResponse)
-def notice(request: Request):
-    """A mock exam-board notice, deliberately simple and quotable."""
-    return TEMPLATES.TemplateResponse(request, "notice.html", {
-        "date": _notice["date"], "changed": _notice["date"] != NOTICE_DEFAULT,
-    })
-
-
-@app.post("/notice")
-def change_notice(date: str = Form(...)):
-    _notice["date"] = " ".join(date.split())[:40] or NOTICE_DEFAULT
-    return RedirectResponse("/notice", status_code=303)
-
-
-@app.get("/try-the-watch", response_class=HTMLResponse)
-def try_the_watch(request: Request):
-    """Explains how to make the agent catch a change, in three steps."""
-    conn = connect()
-    try:
-        return TEMPLATES.TemplateResponse(request, "trywatch.html", _ctx(
-            request, conn, {"date": _notice["date"],
-                            "changed": _notice["date"] != NOTICE_DEFAULT}))
-    finally:
-        conn.close()
+watchroutes.register(app, TEMPLATES, connect, mode, _ctx)
 
 
 @app.get("/health")

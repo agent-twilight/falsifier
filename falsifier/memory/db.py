@@ -181,6 +181,14 @@ CREATE TABLE IF NOT EXISTS calls (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Small bits of state that outlive a request. The demo notice date lives
+-- here rather than in memory, because a host may run several workers and
+-- a judge changing the date on one must see it from all of them.
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 -- A conversation about one plan. Separate sessions for separate plans,
 -- because a plan is a long-lived thing that gets revisited, not a query.
 --
@@ -276,6 +284,7 @@ TABLES = (
     "claims", "runs", "sub_claims", "hypotheses", "searches",
     "results", "evidence", "findings", "calls", "sources",
     "claim_authorities", "routines", "sessions", "messages",
+    "settings",
 )
 
 

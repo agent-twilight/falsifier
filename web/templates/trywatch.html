@@ -3,34 +3,76 @@
 {% block body %}
 <h1>See the watching work</h1>
 <p class="note">
-  The useful part of this only shows itself when the world changes, which
-  you cannot wait around for. So here is a page under our control that you
-  can change yourself.
+  The useful part of this only shows itself when the world changes, and you
+  cannot wait around for that. So here is a page under our control that you
+  can change yourself, and a button that runs the real check on demand
+  rather than waiting for tomorrow morning.
 </p>
 
-<h2>Three steps</h2>
+<h2>Try it</h2>
 <div class="working" style="display:block">
   <div class="step"><b>1</b><span>
-    Open the <a href="/notice">examination notice</a>. It says the exam is
-    on <strong>{{ date }}</strong>.</span></div>
+    I am watching <a href="/notice">this examination notice</a>, which says
+    the exam is on <strong>{{ date }}</strong>, on behalf of
+    {% if session_id %}<a href="/s/{{ session_id }}">this plan</a>{% else %}a plan{% endif %}.
+  </span></div>
   <div class="step"><b>2</b><span>
-    Change the date on that page and publish it. You are now the exam board.</span></div>
+    Open the notice and change the date. You are the examination board.
+  </span></div>
   <div class="step"><b>3</b><span>
-    Ask here: <em>the exam is on {{ date }}</em>. The agent cites the notice.
-    Then change the date again and watch it withdraw what it told you.</span></div>
+    Come back and press the button. Normally this happens on its own each
+    morning.
+  </span></div>
 </div>
 
-<h2>What is real and what is not</h2>
+<div class="ask" style="position:static">
+  <form method="post" action="/try-the-watch/check" style="display:inline">
+    <button class="send" type="submit">Check the notice now</button>
+  </form>
+  {% if date != original or withdrawn %}
+  <form method="post" action="/try-the-watch/reset" style="display:inline">
+    <button class="send" type="submit"
+            style="background:none;color:var(--muted);border-color:var(--line)">
+      Put it back</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if changed %}
+<div class="banner">
+  The notice now says <strong>{{ date }}</strong>. Nothing has noticed yet —
+  press <em>Check the notice now</em>.
+</div>
+{% endif %}
+
+{% if checked and withdrawn %}
+<div class="banner" style="border-left-color:var(--clay)">
+  <strong>It caught it.</strong> The line it was relying on is no longer on
+  that page, so it has withdrawn what it told you — reason recorded, and
+  timestamped. {% if reason %}<br>“{{ reason }}”{% endif %}
+  {% if session_id %}
+  <br><a href="/s/{{ session_id }}">Open the plan</a> to see the message it
+  left, which arrived without anyone asking.
+  {% endif %}
+</div>
+{% elif checked %}
+<div class="banner">
+  Checked, and nothing had changed — so it said nothing. That is the normal
+  outcome, and most days it is the only one. Change the date on
+  <a href="/notice">the notice</a> and check again.
+</div>
+{% endif %}
+
+<h2>What is real here</h2>
 <p class="note">
-  Only who moved the date is fake. The citation, the word-for-word check
-  that the quoted line is really on the page, the re-check that notices it
-  has gone, the withdrawal with its reason and timestamp, and the message
-  that arrives unprompted in the thread — all of that is the same code that
-  runs against Stanford and the real exam board.
+  Only who moves the date. The citation, the check that the quoted sentence
+  is still on the page word for word, the withdrawal with its reason and
+  timestamp, and the unprompted message in the thread are the same code that
+  runs against Stanford and the real examination board.
 </p>
 <p class="note">
-  {% if changed %}The notice has been changed from its original date, so a
-  finding quoting the old date would now be withdrawn.
-  {% else %}The notice is currently unchanged.{% endif %}
+  The only thing changed for the demo is the timing: on a personal instance
+  this runs by itself every morning, and the message reaches you on Telegram
+  without you opening anything.
 </p>
 {% endblock %}
