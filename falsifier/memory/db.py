@@ -277,9 +277,17 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     """Open the register. Foreign keys are off by default in SQLite."""
     db_path = Path(path) if path else config.DB_PATH
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # Stages run in parallel, so several connections write at once. Without
+    # a busy timeout they fail immediately with "database is locked"; with
+    # it they wait their turn. WAL lets readers carry on meanwhile.
+    conn.execute("PRAGMA busy_timeout = 30000")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+    except sqlite3.DatabaseError:
+        pass  # a read-only image, which is fine
     return conn
 
 

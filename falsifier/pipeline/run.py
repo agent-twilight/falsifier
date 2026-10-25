@@ -16,6 +16,8 @@ recorded rather than hidden. That is step 26.
 from __future__ import annotations
 
 import sqlite3
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -106,6 +108,28 @@ def _store_evidence(
     ).lastrowid
 
 
+# How many model calls to have in flight at once. The stages that dominate
+# the clock - triage and read - are independent of each other, so running
+# them one at a time was costing three minutes a claim for no reason.
+# Eight is comfortably under Tavily's 100-per-minute limit and polite to
+# Token Factory.
+LANES = 8
+
+
+def _spread(work, fn, lanes: int = LANES):
+    """Run independent work concurrently, keeping the original order.
+
+    Each worker opens its own database connection rather than sharing one,
+    because sqlite3 connections are not safe across threads.
+    """
+    if not work:
+        return []
+    if len(work) == 1:
+        return [fn(work[0])]
+    with ThreadPoolExecutor(max_workers=min(lanes, len(work))) as pool:
+        return list(pool.map(fn, work))
+
+
 def investigate(
     claim: str,
     *,
@@ -165,84 +189,115 @@ def investigate(
         verdicts: list[verdict.Verdict] = []
         all_evidence: list[tuple[read.Evidence, int | None]] = []
 
+        progress_lock = threading.Lock()
+
+        def bump(**counts):
+            """Funnel counts move from several threads at once.
+
+            Opens its own connection: sqlite3 objects belong to the thread
+            that made them, and these calls come from the worker pool.
+            """
+            with progress_lock:
+                for key, n in counts.items():
+                    setattr(funnel, key, getattr(funnel, key) + n)
+                own = db.connect()
+                try:
+                    _publish(own, run_id, funnel, bump.stage)
+                finally:
+                    own.close()
+        bump.stage = "working out what this rests on"
+
         for sub_row in sub_rows:
             sub_id, sub_text = sub_row["id"], sub_row["text"]
-            evidence_for_sub: list[tuple[read.Evidence, int | None]] = []
 
             try:
-                hypotheses = hypothesise.hypothesise(
+                hypothesise.hypothesise(
                     claim, sub_text, routine=routine, count=shape["hypotheses"],
                     sub_claim_id=sub_id, run_id=run_id, conn=connection,
                 )
             except (parsing.ParseError, nebius.ModelCallError) as exc:
                 failures.append(f"hypotheses for sub-claim {sub_id}: {exc}")
-                hypotheses = []
 
             hyp_rows = connection.execute(
                 "SELECT id, text FROM hypotheses WHERE sub_claim_id = ? "
                 "ORDER BY id DESC LIMIT ?",
-                (sub_id, len(hypotheses)),
+                (sub_id, shape["hypotheses"]),
             ).fetchall()
-            funnel.hypotheses += len(hyp_rows)
-            _publish(connection, run_id, funnel, "inventing ways it could be wrong")
+            bump.stage = "looking for ways this could be out of date"
+            bump(hypotheses=len(hyp_rows))
 
-            for hyp_row in hyp_rows:
-                hyp_id, hyp_text = hyp_row["id"], hyp_row["text"]
+            # --- queries, one call per hypothesis, all at once -----------
+            def make_queries(row):
                 try:
-                    queries = angles.angles(
-                        claim, hyp_text, routine=routine, count=shape["angles"],
-                        run_id=run_id, conn=connection,
-                    )
+                    return row, angles.angles(
+                        claim, row["text"], routine=routine,
+                        count=shape["angles"], run_id=run_id)
                 except (parsing.ParseError, nebius.ModelCallError) as exc:
-                    failures.append(f"queries for hypothesis {hyp_id}: {exc}")
-                    continue
+                    failures.append(f"queries for hypothesis {row['id']}: {exc}")
+                    return row, []
 
-                for query in queries:
-                    try:
-                        found = tavily.search(
-                            query, run_id=run_id, hypothesis_id=hyp_id,
-                            max_results=shape["results"], conn=connection,
-                        )
-                    except tavily.SearchBudgetExceeded as exc:
-                        failures.append(f"search ceiling reached: {exc}")
-                        queries = []
-                        break
-                    except tavily.SearchError as exc:
-                        failures.append(f"search failed for {query!r}: {exc}")
-                        continue
+            bump.stage = "deciding what to search for"
+            planned = _spread(list(hyp_rows), make_queries)
 
-                    funnel.searches += 1
-                    funnel.results += len(found.results)
-                    _publish(connection, run_id, funnel, "searching")
+            # --- searches ------------------------------------------------
+            jobs = [(row, q) for row, queries in planned for q in queries]
 
-                    for result in found.results:
-                        try:
-                            if not read.triage(
-                                hyp_text, result.title, result.snippet,
-                                run_id=run_id, conn=connection,
-                            ):
-                                continue
-                            funnel.triaged_in += 1
-                            ev = read.read(
-                                hyp_text, result.url, result.title,
-                                result.snippet, result.published_date,
-                                authority_domains=authority_domains,
-                                weak_hints=weak_hints,
-                                run_id=run_id, conn=connection,
-                            )
-                        except (parsing.ParseError, nebius.ModelCallError) as exc:
-                            failures.append(f"reading {result.url}: {exc}")
-                            continue
+            def do_search(job):
+                row, query = job
+                try:
+                    found = tavily.search(
+                        query, run_id=run_id, hypothesis_id=row["id"],
+                        max_results=shape["results"])
+                except tavily.SearchBudgetExceeded as exc:
+                    failures.append(f"search ceiling reached: {exc}")
+                    return row, None
+                except tavily.SearchError as exc:
+                    failures.append(f"search failed for {query!r}: {exc}")
+                    return row, None
+                bump(searches=1, results=len(found.results))
+                return row, found
 
-                        if ev is None:
-                            funnel.quotes_rejected += 1
-                            continue
-                        funnel.quotes_verified += 1
-                        _publish(connection, run_id, funnel, "reading sources")
-                        stored = (ev, _store_evidence(connection, hyp_id, ev))
-                        evidence_for_sub.append(stored)
-                        all_evidence.append(stored)
+            bump.stage = "searching"
+            searched = _spread(jobs, do_search)
 
+            # --- triage and read, the bulk of the work -------------------
+            candidates = [
+                (row, result)
+                for row, found in searched if found is not None
+                for result in found.results
+            ]
+
+            def examine(item):
+                row, result = item
+                try:
+                    if not read.triage(row["text"], result.title, result.snippet,
+                                       run_id=run_id):
+                        return None
+                    bump(triaged_in=1)
+                    ev = read.read(
+                        row["text"], result.url, result.title, result.snippet,
+                        result.published_date,
+                        authority_domains=authority_domains,
+                        weak_hints=weak_hints, run_id=run_id)
+                except (parsing.ParseError, nebius.ModelCallError) as exc:
+                    failures.append(f"reading {result.url}: {exc}")
+                    return None
+                if ev is None:
+                    bump(quotes_rejected=1)
+                    return None
+                bump(quotes_verified=1)
+                return row["id"], ev
+
+            bump.stage = "reading the sources"
+            kept = [x for x in _spread(candidates, examine) if x]
+
+            evidence_for_sub = []
+            for hyp_id, ev in kept:
+                stored = (ev, _store_evidence(connection, hyp_id, ev))
+                evidence_for_sub.append(stored)
+                all_evidence.append(stored)
+
+            bump.stage = "weighing it up"
             try:
                 judgement = verdict.judge(
                     claim, sub_text, [e for e, _ in evidence_for_sub],
@@ -253,16 +308,14 @@ def investigate(
                 failures.append(f"verdict for sub-claim {sub_id}: {exc}")
                 judgement = verdict.Verdict(
                     verdict.UNVERIFIABLE,
-                    "This assumption could not be assessed.",
+                    "I could not assess this part.",
                     reason=f"The reasoning step failed: {exc}",
                     sub_claim=sub_text,
                 )
 
             verdicts.append(judgement)
-            _publish(connection, run_id, funnel, "weighing the evidence")
-            _store_finding(
-                connection, claim_id, sub_id, judgement, evidence_for_sub
-            )
+            _store_finding(connection, claim_id, sub_id, judgement,
+                           evidence_for_sub)
 
         for judgement in verdicts:
             if judgement.stance == verdict.CHALLENGED:
