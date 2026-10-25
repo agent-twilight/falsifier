@@ -32,11 +32,17 @@ UNVERIFIABLE = "unverifiable"
 # a Reddit post, already graded "weak" by the system, was allowed to carry
 # an objection at 80% confidence. Grading a source and then ignoring the
 # grade is worse than not grading it, because it looks rigorous.
-CONFIDENCE_CEILING = {"primary": 1.0, "secondary": 0.7, "weak": 0.35}
+CONFIDENCE_CEILING = {"primary": 1.0, "secondary": 0.75, "weak": 0.5}
 
-# Below this, an objection is not worth putting in front of someone as a
-# reason to change their plans. It is reported as unsettled instead.
-MIN_CONFIDENCE_TO_TAKE_A_SIDE = 0.4
+# Below this it is not worth putting in front of someone as a reason to
+# change their plans, and it is reported as unsettled instead.
+#
+# Loosened 25 Oct. The weak ceiling used to sit *below* this floor, so a
+# weak source could never support any verdict at all and anything resting
+# on blogs or forums was automatically unsettled. Saying "I found
+# something, here it is, but it is only a forum post" is more useful than
+# refusing to speak - as long as the confidence shown is honest.
+MIN_CONFIDENCE_TO_TAKE_A_SIDE = 0.3
 
 PROMPT = """You investigated a claim by trying hard to disprove it. Now \
 report honestly on what the evidence shows.

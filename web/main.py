@@ -145,6 +145,40 @@ def _findings_text(conn, claim_id: int) -> str:
     return "\n".join(out)
 
 
+def _answer_directly(message: str, session_id: int) -> None:
+    """Answer a question from the model's own knowledge. No searching."""
+    from falsifier.pipeline import intent
+
+    conn = db.connect()
+    try:
+        history = "\n".join(
+            f"{'They' if m.role == 'user' else 'You'}: {m.body[:400]}"
+            for m in sessions.history(conn, session_id)[-6:-1]
+        )
+        reply = intent.answer(message, history=history)
+
+        # Mark it as the model's own knowledge, then say what this tool is
+        # actually for, once, without nagging.
+        footer = (
+            "\n\n---\n\nThat is my own knowledge rather than anything I "
+            "just looked up. What I am built for is checking a plan against "
+            "what is true today and keeping an eye on it"
+        )
+        if reply.watchable:
+            footer += f" — {reply.watchable} is the sort of thing that moves"
+        footer += (
+            ". Tell me what you are planning and I will go and look properly."
+        )
+        sessions.add(conn, session_id, "agent", reply.text + footer,
+                     kind="assessment")
+    except Exception as exc:  # noqa: BLE001
+        sessions.add(conn, session_id, "agent",
+                     f"Sorry — I could not answer that one: {exc}", kind="text")
+    finally:
+        sessions.set_working(conn, session_id, False)
+        conn.close()
+
+
 def _investigate(claim_text: str, session_id: int, run_mode: str) -> None:
     """Run a check on a worker thread and report back into the thread."""
     from falsifier import artifact
@@ -158,6 +192,20 @@ def _investigate(claim_text: str, session_id: int, run_mode: str) -> None:
         conn.execute("UPDATE sessions SET claim_id = ? WHERE id = ?",
                      (result.claim_id, session_id))
         conn.commit()
+
+        a = result.assessment
+        if a is not None and a.usable:
+            body = (f"**What it really comes down to:** {a.hinges_on}\n\n{a.body}"
+                    if a.hinges_on else a.body)
+            if a.inferred:
+                body += ("\n\n*These bits I worked out rather than read "
+                         "somewhere, so treat them as my reasoning:*\n"
+                         + "\n".join(f"- {i}" for i in a.inferred))
+            if a.worth_finding_out:
+                body += ("\n\n**If you find out one thing, make it this:** "
+                         f"{a.worth_finding_out}")
+            sessions.add(conn, session_id, "agent", body,
+                         kind="assessment", run_id=result.run_id)
 
         for v in result.report.verdicts:
             label = {
@@ -245,6 +293,24 @@ def _reply(message: str, session_id: int, run_mode: str) -> None:
         conn.close()
 
 
+def _route(message: str, session_id: int, run_mode: str) -> None:
+    """Check a claim, or answer a question. Decided before spending anything."""
+    from falsifier.pipeline import intent
+
+    conn = db.connect()
+    try:
+        kind = intent.classify(message, conn=conn)
+    except Exception:  # noqa: BLE001
+        kind = intent.ASK
+    finally:
+        conn.close()
+
+    if kind == intent.CLAIM:
+        _investigate(message, session_id, run_mode)
+    else:
+        _answer_directly(message, session_id)
+
+
 @app.post("/say")
 def say(message: str = Form(...), session_id: str = Form("")):
     """One entry point for both a new plan and a follow-up."""
@@ -282,7 +348,7 @@ def say(message: str = Form(...), session_id: str = Form("")):
         sid = sessions.create(conn, sessions.title_from(message), mode=mode())
         sessions.add(conn, sid, "user", message)
         sessions.set_working(conn, sid, True)
-        threading.Thread(target=_investigate, args=(message, sid, mode()),
+        threading.Thread(target=_route, args=(message, sid, mode()),
                          daemon=True).start()
         return RedirectResponse(f"/s/{sid}", status_code=303)
     finally:

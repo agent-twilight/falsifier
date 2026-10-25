@@ -152,13 +152,26 @@ def _evidence(tier, url="https://example.com/x"):
                           published_date=None)]
 
 
-def test_a_weak_source_cannot_carry_a_confident_objection(monkeypatch):
+def test_a_weak_source_is_capped_but_may_still_speak(monkeypatch):
+    """Loosened 25 Oct: refusing outright was worse than saying so quietly.
+
+    A forum post can support a finding, but only at low confidence, and
+    the reader can see the tier it rests on.
+    """
     canned(monkeypatch, {"verdict": "CHALLENGES", "statement": "x",
                          "evidence_index": 1, "confidence": 0.8})
     v = verdict.judge("c", "s", _evidence("weak", "https://reddit.com/r/Python/x"))
+    assert v.stance == verdict.CHALLENGED
+    assert v.confidence == 0.5, "capped to what a forum post can bear"
+
+
+def test_evidence_too_weak_to_act_on_is_still_refused(monkeypatch):
+    """The floor still exists; it is just lower than the weak ceiling now."""
+    canned(monkeypatch, {"verdict": "CHALLENGES", "statement": "x",
+                         "evidence_index": 1, "confidence": 0.1})
+    v = verdict.judge("c", "s", _evidence("weak", "https://forum.example/x"))
     assert v.stance == verdict.UNVERIFIABLE
     assert "weak source" in v.reason
-    assert "reddit.com" in v.reason
 
 
 def test_a_secondary_source_is_capped_but_still_counts(monkeypatch):
@@ -166,7 +179,7 @@ def test_a_secondary_source_is_capped_but_still_counts(monkeypatch):
                          "evidence_index": 1, "confidence": 0.95})
     v = verdict.judge("c", "s", _evidence("secondary"))
     assert v.stance == verdict.CHALLENGED
-    assert v.confidence == 0.7, "capped to what a secondary source can bear"
+    assert v.confidence == 0.75, "capped to what a secondary source can bear"
 
 
 def test_a_primary_source_keeps_full_confidence(monkeypatch):
