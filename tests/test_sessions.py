@@ -126,3 +126,72 @@ def test_a_short_claim_is_its_own_title():
 def test_an_empty_claim_still_gets_a_label(conn):
     sid = sessions.create(conn, "")
     assert sessions.get(conn, sid, "personal").title == "New plan"
+
+
+# ---------------------------------------------------------------------------
+# Whether the agent is busy. Inferring this from the last run row got two
+# cases wrong on 25 Oct: a follow-up has no run of its own, so the thread
+# looked idle while it was writing; and a run interrupted by a restart
+# stayed "running" for ever, so the thread showed dots on every page load.
+# ---------------------------------------------------------------------------
+
+
+def test_a_new_thread_is_not_busy(conn):
+    sid = sessions.create(conn, "x")
+    assert sessions.get(conn, sid, "personal").working is False
+
+
+def test_dispatching_work_marks_it_busy(conn):
+    sid = sessions.create(conn, "x")
+    sessions.set_working(conn, sid, True)
+    assert sessions.get(conn, sid, "personal").working is True
+
+
+def test_finishing_clears_it(conn):
+    sid = sessions.create(conn, "x")
+    sessions.set_working(conn, sid, True)
+    sessions.set_working(conn, sid, False)
+    assert sessions.get(conn, sid, "personal").working is False
+
+
+def test_a_follow_up_counts_as_busy_even_with_no_run(conn):
+    """The case that showed no dots: an answer being written, no new run."""
+    conn.execute("INSERT INTO claims (id, text) VALUES (1, 'a claim')")
+    conn.execute("INSERT INTO runs (id, claim_id, mode, status) "
+                 "VALUES (1, 1, 'personal', 'complete')")
+    conn.commit()
+    sid = sessions.create(conn, "x", claim_id=1)
+    sessions.set_working(conn, sid, True)
+    assert sessions.get(conn, sid, "personal").working is True
+
+
+def test_work_abandoned_by_a_dead_process_stops_counting(conn):
+    """The case that showed dots for ever: a restart mid-run."""
+    from datetime import datetime, timedelta, timezone
+
+    sid = sessions.create(conn, "x")
+    long_ago = (datetime.now(timezone.utc)
+                - timedelta(minutes=sessions.WORK_STALE_MINUTES + 5)).isoformat()
+    conn.execute("UPDATE sessions SET working_since = ? WHERE id = ?",
+                 (long_ago, sid))
+    conn.commit()
+    assert sessions.get(conn, sid, "personal").working is False
+
+
+def test_recent_work_still_counts(conn):
+    from datetime import datetime, timedelta, timezone
+
+    sid = sessions.create(conn, "x")
+    recent = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    conn.execute("UPDATE sessions SET working_since = ? WHERE id = ?",
+                 (recent, sid))
+    conn.commit()
+    assert sessions.get(conn, sid, "personal").working is True
+
+
+def test_a_corrupt_timestamp_does_not_wedge_the_thread(conn):
+    sid = sessions.create(conn, "x")
+    conn.execute("UPDATE sessions SET working_since = 'not a date' WHERE id = ?",
+                 (sid,))
+    conn.commit()
+    assert sessions.get(conn, sid, "personal").working is False

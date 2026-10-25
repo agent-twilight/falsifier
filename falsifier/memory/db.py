@@ -196,7 +196,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     pinned          INTEGER NOT NULL DEFAULT 0,
     unread          INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-    last_message_at TEXT NOT NULL DEFAULT (datetime('now'))
+    last_message_at TEXT NOT NULL DEFAULT (datetime('now')),
+    -- When the agent started working, or NULL when it is idle. Set on
+    -- dispatch and cleared by the worker, so a follow-up with no run of
+    -- its own still shows as busy, and a process that died does not leave
+    -- a thread spinning for ever: anything older than WORK_STALE_MINUTES
+    -- is treated as finished.
+    working_since   TEXT
 );
 
 -- Every turn, from either side. `kind` separates what the agent said from

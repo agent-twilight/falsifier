@@ -201,6 +201,7 @@ def _investigate(claim_text: str, session_id: int, run_mode: str) -> None:
                      f"Sorry — that one stopped partway through: {exc}. "
                      "Ask me again and I will have another go.", kind="text")
     finally:
+        sessions.set_working(conn, session_id, False)
         conn.close()
 
 
@@ -208,6 +209,7 @@ def _reply(message: str, session_id: int, run_mode: str) -> None:
     """Answer a follow-up, and start a check if it genuinely needs one."""
     from falsifier.pipeline import converse
 
+    keep_working = {"on": False}
     conn = db.connect()
     try:
         session = sessions.get(conn, session_id, run_mode)
@@ -228,14 +230,18 @@ def _reply(message: str, session_id: int, run_mode: str) -> None:
         sessions.add(conn, session_id, "agent", answer.text, kind="text")
 
         if answer.needs_check and answer.check_claim:
+            # Hand straight on: stays busy, no flicker between the two.
+            keep_working["on"] = True
             threading.Thread(
                 target=_investigate,
                 args=(answer.check_claim, session_id, run_mode),
                 daemon=True).start()
     except Exception as exc:  # noqa: BLE001
         sessions.add(conn, session_id, "agent",
-                     f"I could not answer that: {exc}", kind="text")
+                     f"Sorry, I could not answer that one: {exc}", kind="text")
     finally:
+        if not keep_working["on"]:
+            sessions.set_working(conn, session_id, False)
         conn.close()
 
 
@@ -254,6 +260,7 @@ def say(message: str = Form(...), session_id: str = Form("")):
         if existing:
             sid = int(session_id)
             sessions.add(conn, sid, "user", message)
+            sessions.set_working(conn, sid, True)
             threading.Thread(target=_reply, args=(message, sid, mode()),
                              daemon=True).start()
             return RedirectResponse(f"/s/{sid}", status_code=303)
@@ -274,6 +281,7 @@ def say(message: str = Form(...), session_id: str = Form("")):
 
         sid = sessions.create(conn, sessions.title_from(message), mode=mode())
         sessions.add(conn, sid, "user", message)
+        sessions.set_working(conn, sid, True)
         threading.Thread(target=_investigate, args=(message, sid, mode()),
                          daemon=True).start()
         return RedirectResponse(f"/s/{sid}", status_code=303)
@@ -307,18 +315,18 @@ def thread_state(session_id: int, after: int = 0):
              "created_at": m.created_at}
             for m in sessions.history(conn, session_id) if m.id > after
         ]
+        # Only show the funnel for a run that is actually under way. A
+        # finished run's numbers are on the funnel page, not here.
         progress = None
-        if session.claim_id:
+        if session.working and session.claim_id:
             row = conn.execute(
                 "SELECT status, stage, n_hypotheses, n_searches, n_results, "
-                "n_read FROM runs WHERE claim_id = ? ORDER BY id DESC LIMIT 1",
-                (session.claim_id,)).fetchone()
+                "n_read FROM runs WHERE claim_id = ? AND status = 'running' "
+                "ORDER BY id DESC LIMIT 1", (session.claim_id,)).fetchone()
             if row:
                 progress = dict(row)
-        # A thread with no claim yet is still starting its first check.
-        working = progress is None or progress.get("status") == "running"
         return JSONResponse({"messages": new, "progress": progress,
-                             "working": bool(working)})
+                             "working": session.working})
     finally:
         conn.close()
 

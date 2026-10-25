@@ -144,7 +144,14 @@ def test_an_empty_message_is_refused(client):
 def test_the_thread_api_returns_only_new_messages(client):
     data = client.get("/api/thread/1?after=1").json()
     assert all(m["id"] > 1 for m in data["messages"])
-    assert data["progress"]["n_searches"] == 40
+
+
+def test_the_funnel_is_reported_while_a_run_is_under_way(client):
+    conn = main.connect()
+    conn.execute("UPDATE runs SET status = 'running' WHERE id = 1")
+    sessions.set_working(conn, 1, True)
+    conn.close()
+    assert client.get("/api/thread/1").json()["progress"]["n_searches"] == 40
 
 
 # --- demo isolation, a correctness requirement ------------------------------
@@ -240,3 +247,46 @@ def test_markup_keeps_the_marks_the_agent_uses():
     assert "<strong>bold</strong>" in out
     assert "<blockquote>quoted</blockquote>" in out
     assert 'href="https://example.edu"' in out
+
+
+# ---------------------------------------------------------------------------
+# The two dots bugs, 25 Oct.
+# ---------------------------------------------------------------------------
+
+
+def test_an_idle_thread_shows_no_dots(client):
+    """A freshly opened thread must not pulse at you."""
+    assert client.get("/api/thread/1").json()["working"] is False
+    assert 'id="typing"\n     style="display:none"' in client.get("/s/1").text \
+        or 'style="display:none"' in client.get("/s/1").text
+
+
+def test_a_follow_up_shows_dots_even_though_there_is_no_new_run(client):
+    """The thread had a completed run, so it looked idle while writing."""
+    r = client.post("/say", data={"message": "what did you mean by that?",
+                                  "session_id": "1"}, follow_redirects=False)
+    assert r.status_code == 303
+    assert client.get("/api/thread/1").json()["working"] is True
+
+
+def test_the_page_renders_busy_without_waiting_for_a_poll(client):
+    client.post("/say", data={"message": "another question",
+                              "session_id": "1"}, follow_redirects=False)
+    body = client.get("/s/1").text
+    assert "display:flex" in body, "the dots are there on load, not a poll later"
+    assert "Working" in body
+
+
+def test_a_run_interrupted_by_a_restart_does_not_pulse_for_ever(client):
+    """A stuck 'running' row used to mean dots on every page load."""
+    conn = main.connect()
+    conn.execute("UPDATE runs SET status = 'running' WHERE id = 1")
+    conn.execute("UPDATE sessions SET working_since = NULL WHERE id = 1")
+    conn.commit()
+    conn.close()
+    assert client.get("/api/thread/1").json()["working"] is False
+
+
+def test_a_finished_run_does_not_keep_showing_its_funnel(client):
+    """Those numbers belong on the funnel page once the run is done."""
+    assert client.get("/api/thread/1").json()["progress"] is None

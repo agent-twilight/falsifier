@@ -31,6 +31,11 @@ class Message:
         return self.kind == "alert"
 
 
+# A worker that died leaves working_since set. Rather than spin for ever,
+# treat anything older than this as finished.
+WORK_STALE_MINUTES = 12
+
+
 @dataclass
 class Session:
     id: int
@@ -40,10 +45,27 @@ class Session:
     created_at: str
     last_message_at: str
     claim_id: int | None = None
+    working_since: str | None = None
 
     @property
     def has_news(self) -> bool:
         return self.unread > 0
+
+    @property
+    def working(self) -> bool:
+        """Busy now, and not merely abandoned by a process that died."""
+        if not self.working_since:
+            return False
+        from datetime import datetime, timedelta, timezone
+
+        try:
+            started = datetime.fromisoformat(self.working_since)
+        except ValueError:
+            return False
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - started
+        return age < timedelta(minutes=WORK_STALE_MINUTES)
 
 
 def create(
@@ -91,7 +113,7 @@ def listing(conn: sqlite3.Connection, mode: str = "personal") -> list[Session]:
     """For the side panel: pinned first, then whatever spoke most recently."""
     return [
         Session(r["id"], r["title"], r["unread"], r["pinned"], r["created_at"],
-                r["last_message_at"], r["claim_id"])
+                r["last_message_at"], r["claim_id"], r["working_since"])
         for r in conn.execute(
             "SELECT * FROM sessions WHERE mode = ? "
             "ORDER BY pinned DESC, last_message_at DESC LIMIT 60",
@@ -107,7 +129,23 @@ def get(conn: sqlite3.Connection, session_id: int, mode: str) -> Session | None:
     if row is None:
         return None
     return Session(row["id"], row["title"], row["unread"], row["pinned"],
-                   row["created_at"], row["last_message_at"], row["claim_id"])
+                   row["created_at"], row["last_message_at"], row["claim_id"],
+                   row["working_since"])
+
+
+def set_working(conn: sqlite3.Connection, session_id: int, on: bool) -> None:
+    """Say the agent has started or stopped working on this thread.
+
+    Set before dispatching, cleared by the worker in a finally block, so a
+    crash cannot leave the dots pulsing indefinitely.
+    """
+    from datetime import datetime, timezone
+
+    conn.execute(
+        "UPDATE sessions SET working_since = ? WHERE id = ?",
+        (datetime.now(timezone.utc).isoformat() if on else None, session_id),
+    )
+    conn.commit()
 
 
 def mark_read(conn: sqlite3.Connection, session_id: int) -> None:

@@ -35,7 +35,8 @@
 {% endfor %}
 </div>
 
-<div class="typing" id="typing" style="display:none"><i></i><i></i><i></i></div>
+<div class="typing" id="typing"
+     style="display:{{ 'flex' if session and session.working else 'none' }}"><i></i><i></i><i></i></div>
 
 <div class="working" id="working" style="display:none">
   <p class="stage" id="stage">just a moment…</p>
@@ -105,7 +106,12 @@ const typing = document.getElementById("typing");
 const hint = document.getElementById("hint");
 const keys = ["n_hypotheses", "n_searches", "n_results", "n_read"];
 let settled = 0;
-let busy = false;
+let busy = {{ 'true' if session and session.working else 'false' }};
+if (busy) {
+  sendbtn.disabled = true;
+  sendbtn.textContent = "Working…";
+  sendbtn.classList.add("stopping");
+}
 
 function setBusy(on) {
   if (busy === on) return;
