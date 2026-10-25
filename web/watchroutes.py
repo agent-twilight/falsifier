@@ -11,6 +11,8 @@ runs on demand instead, through exactly the same code.
 
 from __future__ import annotations
 
+import threading
+
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -22,6 +24,25 @@ def register(app, TEMPLATES, connect, mode, ctx):
 
     def notice_url(request: Request) -> str:
         return str(request.url_for("notice"))
+
+    def _check_now(url: str) -> None:
+        """Run the real re-verification against the notice page."""
+        from falsifier import monitor
+        from falsifier.memory import db
+
+        conn = db.connect()
+        try:
+            finding_id = watchdemo.ensure(conn, url, mode())
+            conn.execute(
+                "UPDATE findings SET next_check_at = datetime('now','-1 hour') "
+                "WHERE id = ?", (finding_id,))
+            conn.commit()
+            # notify=False: a public demo has nobody to message.
+            monitor.run_once(conn, include_research=False, notify=False)
+        except Exception:  # noqa: BLE001 - never take the web process down
+            pass
+        finally:
+            conn.close()
 
     @app.get("/notice", response_class=HTMLResponse, name="notice")
     def notice(request: Request):
@@ -38,11 +59,23 @@ def register(app, TEMPLATES, connect, mode, ctx):
 
     @app.post("/notice")
     def change_notice(request: Request, date: str = Form(...)):
+        """Publish a change, and let the watch find it by itself.
+
+        On a personal instance the morning run would notice. Here the
+        check is kicked off immediately in the background, so the message
+        still arrives without anyone asking for it - which is the whole
+        point of the product and would be lost if a button press were
+        required to discover anything.
+        """
+        url = notice_url(request)
         conn = connect()
         try:
+            watchdemo.ensure(conn, url, mode())
             watchdemo.set_date(conn, date)
         finally:
             conn.close()
+
+        threading.Thread(target=_check_now, args=(url,), daemon=True).start()
         return RedirectResponse("/try-the-watch?changed=1", status_code=303)
 
     @app.get("/try-the-watch", response_class=HTMLResponse)

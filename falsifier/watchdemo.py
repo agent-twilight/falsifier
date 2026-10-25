@@ -64,7 +64,11 @@ def ensure(conn: sqlite3.Connection, notice_url: str, mode: str = "demo") -> int
     if row:
         return row["id"]
 
-    date = get_date(conn)
+    # Always seed against the original date. The claim says April, so a
+    # finding built from a date someone has since changed would contradict
+    # itself in its own sentence - which is exactly what happened.
+    set_date(conn, ORIGINAL_DATE)
+    date = ORIGINAL_DATE
     claim_id = conn.execute(
         "INSERT INTO claims (text, mode) VALUES (?, ?)", (CLAIM_TEXT, mode)
     ).lastrowid

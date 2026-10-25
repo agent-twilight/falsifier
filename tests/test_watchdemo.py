@@ -128,3 +128,48 @@ def test_the_quoted_sentence_matches_the_page_exactly(conn):
             f"for the 2026 cycle will be conducted on {date} at all "
             f"designated centres.")
     assert read.quote_is_present(watchdemo.quote_for(date), page)
+
+
+# ---------------------------------------------------------------------------
+# The contradiction, 25 Oct. Seeding read whatever the notice currently
+# said, while the claim text hardcodes April, so the thread announced
+# "your plan has the right date" while quoting a different month.
+# ---------------------------------------------------------------------------
+
+
+def test_seeding_ignores_a_date_someone_already_changed(conn):
+    watchdemo.set_date(conn, "14 August 2026")
+    finding_id = watchdemo.ensure(conn, URL)
+
+    row = conn.execute(
+        "SELECT f.text, e.quoted_line FROM findings f "
+        "JOIN evidence e ON e.id = f.evidence_id WHERE f.id = ?",
+        (finding_id,)).fetchone()
+    assert watchdemo.ORIGINAL_DATE in row["quoted_line"]
+    assert "August" not in row["quoted_line"]
+    assert "August" not in row["text"]
+
+
+def test_the_finding_never_contradicts_the_claim(conn):
+    """It must not say a plan is right while quoting a different date."""
+    watchdemo.set_date(conn, "3 November 2026")
+    finding_id = watchdemo.ensure(conn, URL)
+
+    claim = conn.execute(
+        "SELECT c.text FROM claims c JOIN findings f ON f.claim_id = c.id "
+        "WHERE f.id = ?", (finding_id,)).fetchone()["text"]
+    finding = conn.execute(
+        "SELECT f.text, e.quoted_line FROM findings f "
+        "JOIN evidence e ON e.id = f.evidence_id WHERE f.id = ?",
+        (finding_id,)).fetchone()
+
+    month = watchdemo.ORIGINAL_DATE.split()[1]
+    assert month in claim
+    assert month in finding["text"], "the verdict must agree with the claim"
+    assert month in finding["quoted_line"], "and with the line it quotes"
+
+
+def test_seeding_puts_the_notice_back_to_the_original(conn):
+    watchdemo.set_date(conn, "3 November 2026")
+    watchdemo.ensure(conn, URL)
+    assert watchdemo.get_date(conn) == watchdemo.ORIGINAL_DATE
