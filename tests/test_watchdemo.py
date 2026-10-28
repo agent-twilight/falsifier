@@ -173,3 +173,110 @@ def test_seeding_puts_the_notice_back_to_the_original(conn):
     watchdemo.set_date(conn, "3 November 2026")
     watchdemo.ensure(conn, URL)
     assert watchdemo.get_date(conn) == watchdemo.ORIGINAL_DATE
+
+
+# ---------------------------------------------------------------------------
+# The three bugs reported on 28 Oct, two days before submission.
+# ---------------------------------------------------------------------------
+
+
+def test_the_same_page_never_gets_a_second_conversation(conn):
+    """Behind a TLS proxy the app sees its own address as http one request
+    and https the next. Matching the whole URL made those different pages,
+    so every change seeded a fresh claim with a fabricated opening message
+    while the real conversation was left alone."""
+    first = watchdemo.ensure(conn, "http://host.test/notice")
+    second = watchdemo.ensure(conn, "https://host.test/notice")
+
+    assert first == second
+    assert conn.execute("SELECT count(*) FROM claims").fetchone()[0] == 1
+    assert conn.execute("SELECT count(*) FROM sessions").fetchone()[0] == 1
+    url = conn.execute(
+        "SELECT e.url FROM evidence e JOIN findings f ON f.evidence_id = e.id "
+        "WHERE f.id = ?", (first,)).fetchone()["url"]
+    assert url == "https://host.test/notice", "stored address kept current"
+
+
+def test_the_message_says_the_claim_no_longer_holds(conn, monkeypatch):
+    """It used to quote the old agreeing sentence and leave the reader to
+    work out it no longer applied, which read as self-contradiction."""
+    finding_id = watchdemo.ensure(conn, URL)
+    session_id = watchdemo.session_for(conn, finding_id)
+    page_says(monkeypatch, "14 September 2026")
+    due(conn, finding_id)
+
+    monitor.run_once(conn, include_research=False, notify=False)
+    body = sessions.history(conn, session_id)[-1].body
+
+    assert "no longer holds" in body
+    assert "That page now says" in body
+    assert "14 September 2026" in body, "says what the source says instead"
+    assert body.index("no longer holds") < body.index("I had told you")
+
+
+def test_it_keeps_watching_after_the_first_change(conn, monkeypatch):
+    """Filtering the watch list to live findings meant it went quiet for
+    ever once something had been withdrawn."""
+    finding_id = watchdemo.ensure(conn, URL)
+    session_id = watchdemo.session_for(conn, finding_id)
+
+    page_says(monkeypatch, "14 September 2026")
+    due(conn, finding_id)
+    monitor.run_once(conn, include_research=False, notify=False)
+    first = len(sessions.history(conn, session_id))
+
+    # Changed again. The finding is already withdrawn, but the page moving
+    # again is still worth knowing about.
+    page_says(monkeypatch, "2 December 2026")
+    due(conn, finding_id)
+    result = monitor.run_once(conn, include_research=False, notify=False)
+
+    assert not result.quiet, "a second change must still be noticed"
+    messages = sessions.history(conn, session_id)
+    assert len(messages) > first
+    assert "2 December 2026" in messages[-1].body
+
+
+def test_a_page_that_has_not_moved_again_says_nothing(conn, monkeypatch):
+    """Keeping watch must not mean repeating itself every morning."""
+    finding_id = watchdemo.ensure(conn, URL)
+    page_says(monkeypatch, "14 September 2026")
+    due(conn, finding_id)
+    monitor.run_once(conn, include_research=False, notify=False)
+
+    due(conn, finding_id)
+    assert monitor.run_once(conn, include_research=False,
+                            notify=False).quiet
+
+
+def test_a_line_coming_back_is_reported_too(conn, monkeypatch):
+    """An agent that only ever withdraws is not keeping anything current."""
+    finding_id = watchdemo.ensure(conn, URL)
+    session_id = watchdemo.session_for(conn, finding_id)
+
+    page_says(monkeypatch, "14 September 2026")
+    due(conn, finding_id)
+    monitor.run_once(conn, include_research=False, notify=False)
+    assert conn.execute("SELECT status FROM findings WHERE id = ?",
+                        (finding_id,)).fetchone()[0] == "retracted"
+
+    page_says(monkeypatch, watchdemo.ORIGINAL_DATE)
+    due(conn, finding_id)
+    monitor.run_once(conn, include_research=False, notify=False)
+
+    assert conn.execute("SELECT status FROM findings WHERE id = ?",
+                        (finding_id,)).fetchone()[0] == "live"
+    assert "stands again" in sessions.history(conn, session_id)[-1].body
+
+
+def test_the_replacement_sentence_is_found():
+    old = watchdemo.quote_for("14 April 2026")
+    page = ("Notice to Candidates. " + watchdemo.quote_for("14 September 2026")
+            + " Candidates must report one hour before.")
+    found = monitor.replacement_line(old, page)
+    assert found and "14 September 2026" in found
+
+
+def test_an_unrelated_page_yields_no_replacement():
+    old = watchdemo.quote_for("14 April 2026")
+    assert monitor.replacement_line(old, "A page about dog grooming.") is None

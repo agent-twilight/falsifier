@@ -23,6 +23,7 @@ the default outcome of a day's work is no message at all.
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -34,6 +35,34 @@ from falsifier.memory import db, sessions
 from falsifier.pipeline import freshness
 
 
+def replacement_line(old_quote: str, page_text: str) -> str | None:
+    """The sentence that seems to have taken the old one's place.
+
+    Picks whichever sentence on the page now shares the most words with
+    the line that used to be there. Crude, but it reliably finds "the same
+    sentence with the date changed", which is the common case and the one
+    the reader most wants to see.
+    """
+    if not page_text:
+        return None
+    wanted = {w for w in re.findall(r"[a-z0-9]+", old_quote.lower())
+              if len(w) > 3}
+    if not wanted:
+        return None
+
+    best, score = None, 0
+    for sentence in re.split(r"(?<=[.!?])\s+", " ".join(page_text.split())):
+        if not 40 < len(sentence) < 400:
+            continue
+        words = {w for w in re.findall(r"[a-z0-9]+", sentence.lower())
+                 if len(w) > 3}
+        overlap = len(wanted & words)
+        if overlap > score:
+            best, score = sentence.strip(), overlap
+    # Needs real overlap, or it is just the nearest unrelated sentence.
+    return best if score >= max(3, len(wanted) // 3) else None
+
+
 @dataclass
 class Change:
     """Something that happened to a finding you were relying on."""
@@ -42,14 +71,16 @@ class Change:
     claim: str
     statement: str
     url: str
-    kind: str  # retracted | source_gone | source_changed
+    kind: str  # retracted | source_gone | source_changed | restored
     detail: str
+    now_says: str | None = None
 
     def describe(self) -> str:
         return {
             "retracted": "something I told you has stopped being true",
             "source_gone": "a page I was relying on has disappeared",
-            "source_changed": "there is something new on this",
+            "source_changed": "that page has changed again",
+            "restored": "something I withdrew is back",
         }[self.kind]
 
 
@@ -174,11 +205,15 @@ def due_findings(conn: sqlite3.Connection, limit: int = 200) -> list[sqlite3.Row
     return conn.execute(
         "SELECT f.id, f.text AS statement, f.claim_id, c.text AS claim, "
         "       e.id AS evidence_id, e.quoted_line, e.url, e.etag, "
-        "       e.source_tier "
+        "       e.source_tier, e.content_hash, f.status "
         "FROM findings f "
         "JOIN claims c ON c.id = f.claim_id "
         "JOIN evidence e ON e.id = f.evidence_id "
-        "WHERE f.status = 'live' AND f.evidence_id IS NOT NULL "
+        # Withdrawn findings stay on the watch list. A source can change
+        # again, or change back, and a claim that stopped being true is
+        # exactly the one worth continuing to follow. Filtering to 'live'
+        # meant the watch went quiet for ever after the first change.
+        "WHERE f.status IN ('live', 'retracted') AND f.evidence_id IS NOT NULL "
         "  AND (f.next_check_at IS NULL OR f.next_check_at <= ?) "
         "ORDER BY f.next_check_at IS NULL DESC, f.next_check_at "
         "LIMIT ?",
@@ -252,18 +287,41 @@ def reverify(conn: sqlite3.Connection, limit: int = 200) -> DayResult:
 
         from falsifier.pipeline import read as read_stage
 
-        if read_stage.quote_is_present(row["quoted_line"], text):
-            result.unchanged += 1
-        else:
-            _retract(
-                conn, row["id"],
-                "The quoted line is no longer present on the page.",
-            )
+        present = read_stage.quote_is_present(row["quoted_line"], text)
+        fingerprint = freshness.fingerprint(text)
+        moved_again = (row["content_hash"] is not None
+                       and row["content_hash"] != fingerprint)
+        was_retracted = row["status"] == "retracted"
+
+        if present and was_retracted:
+            # The line is back. Say so: an agent that only ever withdraws
+            # is not keeping anything current.
+            conn.execute(
+                "UPDATE findings SET status = 'live', retracted_at = NULL, "
+                "retracted_reason = NULL WHERE id = ?", (row["id"],))
             result.changes.append(Change(
                 row["id"], row["claim"], row["statement"], row["url"],
-                "retracted",
-                "the line it rested on has gone from the page",
-            ))
+                "restored", "the line it rested on is on the page again"))
+        elif present:
+            result.unchanged += 1
+        elif not was_retracted:
+            _retract(conn, row["id"],
+                     "The quoted line is no longer present on the page.")
+            result.changes.append(Change(
+                row["id"], row["claim"], row["statement"], row["url"],
+                "retracted", "the line it rested on has gone from the page",
+                now_says=replacement_line(row["quoted_line"], text)))
+        elif moved_again:
+            # Already withdrawn, and the page has moved on again. Worth
+            # saying, because the new value may matter as much as the loss.
+            result.changes.append(Change(
+                row["id"], row["claim"], row["statement"], row["url"],
+                "source_changed", "that page has changed again",
+                now_says=replacement_line(row["quoted_line"], text)))
+        else:
+            # Withdrawn already and the page has not moved since. Nothing
+            # to say; repeating yourself is how an agent gets muted.
+            result.unchanged += 1
 
         conn.execute(
             "UPDATE evidence SET etag = ?, last_modified = ?, "
@@ -387,27 +445,52 @@ def _speak_in_threads(conn: sqlite3.Connection, changes: list[Change]) -> None:
 
         name = (os.getenv("USER_NAME") or "").strip().split(" ")[0]
         hello = f"Hi {name} — " if name else "Hi — "
-        opener = {
-            "retracted": (
-                "I have been keeping an eye on this one, and something I "
-                "told you has stopped being true."),
-            "source_gone": (
-                "I have been keeping an eye on this one, and the page I was "
-                "relying on has gone."),
-            "source_changed": (
-                "I have been keeping an eye on this one, and something new "
-                "has turned up."),
-        }[change.kind]
 
-        body = (
-            f"{hello}{opener}\n\n"
-            f"Here is what I had told you:\n\n"
-            f"> {change.statement}\n\n"
-            f"That came from this page, and it does not say that any more: "
-            f"[{change.url}]({change.url})\n\n"
-            f"Worth a look yourself, in case it changes what you were "
-            f"planning. Say the word and I will dig into what replaced it."
+        if change.kind == "restored":
+            body = (
+                f"{hello}good news on this one. The line I withdrew is back "
+                f"on the page, so what I originally told you stands again.\n\n"
+                f"> {change.statement}\n\n"
+                f"[{change.url}]({change.url})"
+            )
+            sessions.add(conn, row["id"], "agent", body, kind="alert")
+            continue
+
+        if change.kind == "source_gone":
+            body = (
+                f"{hello}the page I was relying on for this has gone "
+                f"altogether, so I can no longer stand behind what I told "
+                f"you:\n\n> {change.statement}\n\n"
+                f"[{change.url}]({change.url})\n\n"
+                f"Worth checking whether it moved somewhere else. Say the "
+                f"word and I will go looking."
+            )
+            sessions.add(conn, row["id"], "agent", body, kind="alert")
+            continue
+
+        # retracted, or changed again. Lead with the claim no longer
+        # holding, then say what the page says instead. The earlier version
+        # quoted the old agreeing sentence and left the reader to work out
+        # for themselves that it no longer applied, which read as the agent
+        # contradicting itself inside one message.
+        opener = (
+            "what I told you about this no longer holds."
+            if change.kind == "retracted"
+            else "that page has moved again since I last told you about it."
         )
+        body = f"{hello}{opener}\n\nI had told you:\n\n> {change.statement}\n\n"
+        if change.now_says:
+            body += (
+                f"That page now says:\n\n> {change.now_says}\n\n"
+                f"So treat what I told you as out of date. Worth checking "
+                f"whether this changes your plans.\n\n"
+            )
+        else:
+            body += (
+                "The line I was relying on is not on that page any more, and "
+                "I could not find what replaced it. Worth a look yourself.\n\n"
+            )
+        body += f"[{change.url}]({change.url})"
         sessions.add(conn, row["id"], "agent", body, kind="alert")
 
 

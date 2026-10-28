@@ -32,10 +32,13 @@ def register(app, TEMPLATES, connect, mode, ctx):
 
         conn = db.connect()
         try:
-            finding_id = watchdemo.ensure(conn, url, mode())
-            conn.execute(
-                "UPDATE findings SET next_check_at = datetime('now','-1 hour') "
-                "WHERE id = ?", (finding_id,))
+            watchdemo.ensure(conn, url, mode())
+            # Every finding on that page, so a claim the user raised
+            # themselves is re-checked too, not only the seeded example.
+            for finding_id in watchdemo.all_watching(conn):
+                conn.execute(
+                    "UPDATE findings SET next_check_at = "
+                    "datetime('now','-1 hour') WHERE id = ?", (finding_id,))
             conn.commit()
             # notify=False: a public demo has nobody to message.
             monitor.run_once(conn, include_research=False, notify=False)

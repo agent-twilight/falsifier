@@ -51,17 +51,37 @@ def quote_for(date: str) -> str:
             f"designated centres.")
 
 
+def existing(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    """Any finding already watching the notice page, whatever its URL.
+
+    Matched on the path rather than the whole URL. Behind a TLS proxy the
+    app can build its own address as http:// one request and https:// the
+    next, and an exact match treated those as different pages - so every
+    change seeded a fresh claim and a fresh conversation, with a
+    fabricated opening message, while the real one was left alone.
+    """
+    return conn.execute(
+        "SELECT f.id, e.id AS evidence_id, e.url FROM findings f "
+        "JOIN evidence e ON e.id = f.evidence_id "
+        "WHERE e.url LIKE '%/notice' OR e.url LIKE '%/notice/' "
+        "ORDER BY f.id DESC LIMIT 1"
+    ).fetchone()
+
+
 def ensure(conn: sqlite3.Connection, notice_url: str, mode: str = "demo") -> int:
     """Make sure the demo thread and its finding exist. Returns the finding id.
 
     Seeded lazily from a real request, so the URL matches whatever host
     this is actually running on.
     """
-    row = conn.execute(
-        "SELECT f.id FROM findings f JOIN evidence e ON e.id = f.evidence_id "
-        "WHERE e.url = ? ORDER BY f.id DESC LIMIT 1", (notice_url,)
-    ).fetchone()
+    row = existing(conn)
     if row:
+        # Keep the stored address current without creating a second
+        # conversation for what is the same page.
+        if row["url"] != notice_url:
+            conn.execute("UPDATE evidence SET url = ? WHERE id = ?",
+                         (notice_url, row["evidence_id"]))
+            conn.commit()
         return row["id"]
 
     # Always seed against the original date. The claim says April, so a
@@ -116,6 +136,20 @@ def session_for(conn: sqlite3.Connection, finding_id: int) -> int | None:
         "WHERE f.id = ?", (finding_id,)
     ).fetchone()
     return row["id"] if row else None
+
+
+def all_watching(conn: sqlite3.Connection) -> list[int]:
+    """Every finding citing the notice page, including any the user made.
+
+    The watch re-verifies all of them, so a claim the user raised
+    themselves is updated too rather than only the seeded example.
+    """
+    return [
+        r["id"] for r in conn.execute(
+            "SELECT f.id FROM findings f JOIN evidence e ON e.id = f.evidence_id "
+            "WHERE e.url LIKE '%/notice' OR e.url LIKE '%/notice/'"
+        )
+    ]
 
 
 def reset(conn: sqlite3.Connection, notice_url: str) -> None:
