@@ -7,6 +7,13 @@
   <h1>{{ greeting }}</h1>
   <p>Tell me what you are planning. I will check whether it still holds up,
      then keep an eye on it and say something when the world moves.</p>
+  {% if demo %}
+  <p class="note" style="margin-top:1rem">
+    The watching is the point, and it only shows itself when something
+    changes — so there is a page you can change yourself:
+    <a href="/try-the-watch">see the watching work</a>.
+  </p>
+  {% endif %}
 </div>
 {% else %}
 <h1>{{ session.title }}</h1>

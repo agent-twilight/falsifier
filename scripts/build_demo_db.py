@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from falsifier import config  # noqa: E402
+from falsifier import watchdemo  # noqa: E402
 from falsifier.memory import db, routines  # noqa: E402
 
 TARGET = config.DATA_DIR / "demo.db"
@@ -119,6 +120,15 @@ def main(claim_ids: list[int]) -> int:
     print(f"building {TARGET.name} from claims {claim_ids}")
     copied = sum(copy_claim(src, dst, cid) for cid in claim_ids)
     dst.commit()
+
+    # The plan whose source a visitor can change. Seeded here so it is in
+    # the side panel from the first page load; appearing only once someone
+    # opened /try-the-watch made it look as though the tool had invented a
+    # conversation. The URL is matched on its path at runtime, so this
+    # works whatever host it ends up on.
+    watchdemo.ensure(dst, "https://falsifier.onrender.com/notice", mode="demo")
+    dst.commit()
+    print("  seeded the watched plan, pinned to the top of the panel")
 
     for table in ("claims", "sessions"):
         leaked = dst.execute(

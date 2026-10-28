@@ -116,6 +116,9 @@ def ensure(conn: sqlite3.Connection, notice_url: str, mode: str = "demo") -> int
 
     session_id = sessions.create(conn, "My exam is on 14 April",
                                  mode=mode, claim_id=claim_id)
+    # Pinned so it is the first thing in the panel, since it is the one a
+    # visitor is invited to interfere with.
+    sessions.set_pinned(conn, session_id, True)
     sessions.add(conn, session_id, "user", CLAIM_TEXT)
     sessions.add(
         conn, session_id, "agent",
