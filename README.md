@@ -286,10 +286,12 @@ meant to solve.
 - **Re-checking a known page cannot find news that appeared elsewhere.** That
   needs a fresh search, which costs credits, so it runs weekly rather than
   daily. Within a week, something new may exist that it has not seen.
-- **It has been running unattended since 19 October.** One scheduled run was
-  missed on 20 October because the laptop was asleep; a logon trigger now
-  covers that. The log in `logs/monitor.log` is the real record, and it is
-  short.
+- **The unattended record is short and has gaps.** `logs/monitor.log`
+  shows runs on 6 days between 19 and 28 October, not every day:
+  the laptop it runs on was asleep or off for the rest. A scheduled task
+  plus a logon trigger cover what they can, but a machine that is off
+  cannot check anything. The log is the real record and it is in the repo;
+  nothing here claims weeks of continuous operation.
 
 ---
 
