@@ -195,8 +195,16 @@ def fetch_text(url: str) -> tuple[str | None, PageState]:
     text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", response.text,
                   flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
-    text = (text.replace("&nbsp;", " ").replace("&amp;", "&")
-                .replace("&#39;", "'").replace("&quot;", '"'))
+    # Decode every entity, not the four I thought of. Hand-picking them
+    # left things like "&middot;" in quoted text, which looks like
+    # gibberish to a reader and would be quoted verbatim in a message.
+    import html as html_module
+
+    text = html_module.unescape(text)
+    # Block-level tags became nothing, so sentences from separate
+    # paragraphs ran together. Put the boundaries back before collapsing.
+    text = re.sub(r"\s*\n\s*", "\n", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
     return text, state
 
 

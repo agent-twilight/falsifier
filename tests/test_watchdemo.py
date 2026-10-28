@@ -280,3 +280,37 @@ def test_the_replacement_sentence_is_found():
 def test_an_unrelated_page_yields_no_replacement():
     old = watchdemo.quote_for("14 April 2026")
     assert monitor.replacement_line(old, "A page about dog grooming.") is None
+
+
+def test_the_replacement_sentence_is_clean(conn):
+    """On the live site this came back as "NTC/2026/0417 &middot; Office of
+    the Examination Board Candidates are hereby informed..." - a reference
+    line, an undecoded entity and the real sentence all run together."""
+    old = watchdemo.quote_for("14 April 2026")
+    page = "\n".join([
+        "Notice to Candidates",
+        "Ref. NTC/2026/0417 \u00b7 Office of the Examination Board",
+        watchdemo.quote_for("2 December 2026"),
+        "Candidates must report one hour before.",
+    ])
+    found = monitor.replacement_line(old, page)
+    assert found.startswith("Candidates are hereby informed")
+    assert "NTC/2026" not in found
+    assert "&" not in found
+
+
+def test_entities_are_decoded_when_reading_a_page(monkeypatch):
+    """Hand-picking four entities left things like &middot; in quotes."""
+    import types
+
+    from falsifier.pipeline import freshness
+
+    monkeypatch.setattr(freshness.requests, "get", lambda url, **kw:
+                        types.SimpleNamespace(
+                            status_code=200,
+                            headers={"Content-Type": "text/html"},
+                            text="<p>Ref &middot; 2026 &mdash; the date is "
+                                 "14&nbsp;April</p>"))
+    text, _ = freshness.fetch_text("https://example.test/x")
+    assert "&middot;" not in text and "&mdash;" not in text
+    assert "&nbsp;" not in text

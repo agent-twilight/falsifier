@@ -51,7 +51,15 @@ def replacement_line(old_quote: str, page_text: str) -> str | None:
         return None
 
     best, score = None, 0
-    for sentence in re.split(r"(?<=[.!?])\s+", " ".join(page_text.split())):
+    # Split on line breaks as well as sentence ends: a reference line and
+    # the sentence after it are separate things even without a full stop
+    # between them, and running them together produced quotes that opened
+    # with a document number.
+    pieces = []
+    for block in page_text.split("\n"):
+        pieces.extend(re.split(r"(?<=[.!?])\s+", " ".join(block.split())))
+
+    for sentence in pieces:
         if not 40 < len(sentence) < 400:
             continue
         words = {w for w in re.findall(r"[a-z0-9]+", sentence.lower())
