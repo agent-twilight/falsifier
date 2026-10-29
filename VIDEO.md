@@ -1,177 +1,154 @@
-# Demo video — shot list
+# Demo video — final script
 
-Written for: you, filming. Under 3 minutes, public on YouTube, with audio.
+Under 3 minutes, public on YouTube, with audio. About 405 spoken words,
+which lands near **2:45** at a normal pace.
 
-**The one hard requirement:** the audio must say **Nebius Token Factory**
-and **NVIDIA Nemotron** out loud. Not on a slide. Spoken.
-
----
-
-## Film on your own instance, not the public URL
-
-`http://127.0.0.1:8000` — start it with `scripts\run_web.cmd`.
-
-Three reasons:
-
-- **Nothing is lost.** It writes to a file on your disk. The free host has
-  no disk, so it resets when it sleeps or redeploys, which is what kept
-  wiping your notifications.
-- **Telegram actually fires.** The public demo has nobody to notify.
-- **Your real plans are in it**, with real timestamps going back to 19 Oct.
-
-Show the public URL at the end so judges know where to go.
-
-## Before you press record
-
-1. Start the server, open the site, let it settle.
-2. Press **"Put it back"** on *See the watching work* so the notice reads
-   **14 April 2026** and no dot is showing.
-3. Have your phone on screen or beside you for the Telegram shot.
-4. Decide which plan you open in beat 2 — the **Nvidia** one is the best,
-   because the answer is genuinely useful and it admits what it cannot know.
+**The one hard requirement:** say **Nebius Token Factory** and **NVIDIA
+Nemotron** out loud. Not on a slide. Spoken. Both are in the script twice.
 
 ---
 
-## The shape
+## Before you record
 
-| | Beat | Time | On screen |
-|---|---|---|---|
-| 1 | The problem | 0:00–0:20 | Landing page |
-| 2 | It checks | 0:20–0:55 | A finished plan |
-| 3 | **It tells you** | 0:55–1:45 | Notice → dot → message |
-| 4 | Show your working | 1:45–2:20 | Funnel, then numbers |
-| 5 | What it won't do | 2:20–2:40 | An unsettled answer |
-| 6 | Close | 2:40–2:55 | Landing page |
-
-Beat 3 is the one that matters. Everything else is support.
+1. **Start your own instance** — `scripts\run_web.cmd`, then
+   `http://127.0.0.1:8000`. Telegram only fires here; the public demo has
+   nobody to notify. Show the public URL in the description instead.
+2. Open **See the watching work** and press **Put it back**, so the notice
+   reads 14 April 2026 and no dot is showing.
+3. Have **Telegram open** beside the browser, or on your phone in shot.
+4. Fill in the two brackets in beat 2 with a real claim of yours. The
+   **Stanford degree** one is the cleanest: the verdict is a precise
+   distinction rather than a flat yes or no.
+5. Do a silent run-through once. The alert takes about **two seconds** —
+   know what that pause feels like before you are recording.
 
 ---
 
-## Beat 1 — the problem (0:00–0:20)
+## The script
 
-**On screen:** the landing page, the box empty.
+### 1. The problem · 0:00–0:28 · *face to camera, or b-roll*
 
-> You plan a hundred days of revision. Then the exam board moves the date,
-> and nobody tells you. Every day of that plan is now built on something
-> that is no longer true.
+> I keep making plans. Career moves, startup ideas. And by the end of the
+> month the company I was aiming at is laying people off, or some
+> seventeen-year-old has already shipped the thing I was going to build.
 >
-> This is the Falsifier. You tell it what you are planning, it checks
-> whether that still holds up — and then it keeps watching.
+> The world moves too fast, and my plans quietly go out of date without me
+> noticing.
+>
+> So I built something I can tell my plans to. It checks them against the
+> world as it is today — and then it keeps watching.
 
-Do **not** say "it tries to prove you wrong." That framing is gone.
+### 2. It checks, and it cites · 0:28–0:58 · *open a finished plan*
 
-## Beat 2 — it checks, and it cites (0:20–0:55)
+> This is The Falsifier. Here is a real plan of mine: **[your claim, one
+> sentence]**.
+>
+> It came back with **[the verdict, a few words]**, at ninety per cent
+> confidence, from Stanford's own admissions page.
 
-**On screen:** open the Nvidia plan. Scroll slowly through one finding.
+*[point at the quoted line, then the link]*
 
-> I told it I thought ten years at Nvidia could make me a multimillionaire.
-> It did not just agree with me.
+> Everything it tells me carries the exact line it rests on, and a link I
+> can click. And that quote is checked word for word against the live
+> page. If the sentence is not really there, it gets thrown away. About a
+> third of them are.
 
-Point at the quote and the link.
+### 3. Under the hood · 0:58–1:28 · *click “see how I checked this”, then the numbers page*
 
-> Everything it tells me carries the line it rests on and a link I can
-> click. If it cannot find a real sentence on a real page, it does not get
-> to make the claim — that is checked in code, not asked for politely.
+> Here is everything it discarded getting to that answer. The angles it
+> tried, the searches it ran, the pages it read.
+>
+> Small **NVIDIA Nemotron** models make hundreds of cheap judgements. A
+> bigger one reads the sources. The biggest one decides, twice. All of it
+> running on **Nebius Token Factory**.
+>
+> That split makes it nine and a half times cheaper than putting
+> everything through the largest model — and that is measured from logged
+> calls, not estimated. The whole project has cost me about twenty-five
+> cents.
 
-Then the reasoning block, labelled *my reasoning, not evidence*:
+### 4. It comes to you · 1:28–2:10 · **the one that matters**
 
-> And where the sources run out, it says so and reasons anyway — here it
-> works out that the equity grant is what actually decides this, not the
-> salary. It is clear about which part is evidence and which part is
-> thinking.
+*[open the test notice page, Telegram visible]*
 
-## Beat 3 — it comes to you (0:55–1:45) — **the important one**
+> But checking once is not the point. It re-checks every source behind my
+> plans every few days — official pages every three.
+>
+> Here is a test page one of my plans depends on. I am going to play the
+> source. I will change the date and publish it, and I am not going to ask
+> it anything. Normally it would find this on its own the next morning;
+> here, publishing sets the check off straight away.
 
-**On screen:** the side panel, no dots. Then *See the watching work*.
+*[change the date, publish, then stop talking for about two seconds]*
 
-> Here is the part no general assistant does. I am going to play the exam
-> board.
-
-Open the notice. Change the date. Publish.
-
-> I have just changed the source it was relying on. I am not going to ask
-> it anything.
-
-**Cut back to the side panel.** Let the dot appear on camera. Wait for it.
-
-> There. That conversation has a dot on it now, and I never typed
-> anything.
-
-Open the plan. Read the message, or let it sit on screen.
-
+> There. It came to me.
+>
 > It says what it told me no longer holds, shows what the page says
-> instead, and timestamps the withdrawal. That is an AI correcting itself,
+> instead, and timestamps the correction. That is an AI correcting itself,
 > on the record.
 
-**Then the phone**, if you have a Telegram alert to show:
+### 5. What it will not do · 2:10–2:20
 
-> And on my own machine it reaches me here, without me opening anything.
+> And when it cannot settle something, it says so — and names the one fact
+> that would settle it.
 
-## Beat 4 — show your working (1:45–2:20)
+### 6. Close · 2:20–2:45 · *back to the landing page*
 
-**On screen:** click *see how I checked this*.
-
-> Everything it threw away. Angles it tried, searches it ran, pages it
-> read, quotes that survived being checked word for word against the page
-> they came from. About a third get discarded because the sentence was not
-> actually there.
-
-**Then the numbers page.**
-
-> Every one of those decisions is an NVIDIA Nemotron model running on
-> Nebius Token Factory. Nemotron Nano does the hundreds of cheap
-> judgements. Super reads the sources. Ultra decides, twice.
+> A month ago I had never built an app. Now it checks my plans against the
+> real world, and when the world moves, it tells me.
 >
-> Nine and a half cents a claim. Putting the same work entirely through
-> the largest model would cost nine and a half times more — and that is
-> measured from logged calls, not estimated.
-
-Say those two product names clearly. This is the required bit.
-
-## Beat 5 — what it will not do (2:20–2:40)
-
-**On screen:** an answer where it refused to settle something.
-
-> It is also willing to say it does not know. Here it will not guess at my
-> compensation, and it tells me exactly which fact would settle it. An
-> assistant that answers everything is not one you should trust.
-
-## Beat 6 — close (2:40–2:55)
-
-> Open source, MIT licensed, built on Nemotron through Nebius Token
-> Factory. There is a live demo in the description where you can change
-> the source yourself and watch it notice.
+> Open source, MIT licensed, running on **NVIDIA Nemotron** through
+> **Nebius Token Factory**. The demo is linked below — go and change the
+> date yourself, and see whether it notices.
 
 ---
 
-## Say these, they are required or near enough
+## If you run long
 
-- **"Nebius Token Factory"** and **"NVIDIA Nemotron"**, out loud
-- Name the tiers doing different jobs — Nano, Super, Ultra
-- The cost number and that it is measured
+Cut in this order:
 
-## Do not say these
+1. Beat 5, the unsettled line. One sentence, easy to lose.
+2. The second half of beat 3 — keep the model names and the cost, drop
+   "about twenty-five cents".
+3. Tighten beat 1 to the first paragraph.
 
-- **"It has been running for weeks."** The log shows **six days**
-  between 19 and 28 October, with gaps where the laptop was off. Say
-  "since the nineteenth", or say nothing. The log is in the repo and a
-  judge can open it.
-- **"It proves you wrong."** Wrong product, wrong framing.
-- **"The gap is real, nobody has built this."** It cannot prove a
-  universal negative and the README says so.
-- Anything about the dummy notice being a real exam board. Say plainly
-  that you are playing the board, and that only *who moves the date* is
-  simulated.
+**Never cut beat 4.** It is the only thing in the video that no general
+assistant does.
+
+---
+
+## Getting the facts right
+
+These are all checkable from your repo, so the honest version costs
+nothing and the other kind is a risk.
+
+- **The schedule.** The daily loop re-checks each source on its own
+  interval — **3 days** for an official page, 2 for news, 7 for a forum.
+  Separately, once a week it searches for pages that did not exist before.
+  Do **not** say "it checks weekly"; that understates it.
+- **The demo responds in seconds** because publishing a change triggers
+  the check immediately. Say so. The page says the same thing, so a judge
+  comparing the two will find them consistent.
+- **Only who moves the date is simulated.** The citation, the
+  word-for-word check, the withdrawal and the message are the same code
+  that runs against Stanford.
+- **It has run on six days** between 19 and 28 October, with gaps where
+  the laptop was off. Say "since the nineteenth" or say nothing. Never
+  "for weeks" — the log is in the repo.
+- **Cost is $0.27 on Nebius** plus 48 of 1000 free Tavily credits.
+- **It is called The Falsifier**, not Falsify. That is what the site, the
+  README and the repo all say.
+- **It cannot prove nobody else has built this.** Do not claim the gap is
+  empty.
 
 ## Things that will trip you up
 
 - **Press "Put it back" between takes**, or the dot is already gone and
   the finding already withdrawn.
-- **The dot clears the moment you open the thread**, like any messaging
-  app. Film the panel first, then open it.
-- **Do not open the thread while waiting** for the dot — that marks it
+- **The dot clears the instant you open the thread.** Film the panel
+  first, then open it.
+- **Do not open the thread while waiting** for the alert — that marks it
   read.
-- The message arrives in about **two seconds**. Do not cut away early,
-  and do not leave a long silent pause either.
-- **Nothing in the repo is private**, but your `.env` is not in it. Do not
-  put a terminal with keys on screen.
+- **Do not put a terminal with your `.env` on screen.**
+- Record the two-second pause in beat 4 rather than cutting it. The wait
+  is the proof that you did not prompt it.
