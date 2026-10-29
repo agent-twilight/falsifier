@@ -10,16 +10,18 @@ Nemotron** out loud. Not on a slide. Spoken. Both are in the script twice.
 
 ## Before you record
 
-1. **Start your own instance** — `scripts\run_web.cmd`, then
-   `http://127.0.0.1:8000`. Telegram only fires here; the public demo has
-   nobody to notify. Show the public URL in the description instead.
-2. Open **See the watching work** and press **Put it back**, so the notice
-   reads 14 April 2026 and no dot is showing.
-3. Have **Telegram open** beside the browser, or on your phone in shot.
-4. Fill in the two brackets in beat 2 with a real claim of yours. The
-   **Stanford degree** one is the cleanest: the verdict is a precise
+1. **Film the public URL**: `https://falsifier.onrender.com`. It is what
+   judges will click, and a localhost address on screen invites the
+   question of whether the deployed version actually works.
+2. **Open it a few minutes early.** The free host sleeps after fifteen
+   minutes idle and takes about fifty seconds to wake. Reload until it is
+   snappy, then leave the tab open.
+3. Open **See the watching work** and press **Put it back**, so the notice
+   reads 14 April 2026 and no dot is showing in the panel.
+4. Fill in the two brackets in beat 2 with one of the worked examples. The
+   **Stanford degree** one is cleanest: the verdict is a precise
    distinction rather than a flat yes or no.
-5. Do a silent run-through once. The alert takes about **two seconds** —
+5. Do a silent run-through once. The message takes about **two seconds** —
    know what that pause feels like before you are recording.
 
 ---
@@ -30,13 +32,12 @@ Nemotron** out loud. Not on a slide. Spoken. Both are in the script twice.
 
 > I keep making plans. Career moves, startup ideas. And by the end of the
 > month the company I was aiming at is laying people off, or some
-> seventeen-year-old has already shipped the thing I was going to build.
+> seventeen-year-old has already shipped my idea.
 >
-> The world moves too fast, and my plans quietly go out of date without me
-> noticing.
+> My plans go out of date and nobody tells me.
 >
 > So I built something I can tell my plans to. It checks them against the
-> world as it is today — and then it keeps watching.
+> world as it is today — and then keeps watching.
 
 ### 2. It checks, and it cites · 0:28–0:58 · *open a finished plan*
 
@@ -48,41 +49,45 @@ Nemotron** out loud. Not on a slide. Spoken. Both are in the script twice.
 
 *[point at the quoted line, then the link]*
 
-> Everything it tells me carries the exact line it rests on, and a link I
-> can click. And that quote is checked word for word against the live
-> page. If the sentence is not really there, it gets thrown away. About a
-> third of them are.
+> Everything it tells me carries the exact line it rests on, and a link.
+> That quote is checked word for word against the live page — if the
+> sentence is not really there, it gets thrown away. About a third are.
 
 ### 3. Under the hood · 0:58–1:28 · *click “see how I checked this”, then the numbers page*
 
-> Here is everything it discarded getting to that answer. The angles it
-> tried, the searches it ran, the pages it read.
+> Here is everything it discarded getting there. The angles it tried, the
+> searches it ran, the pages it read.
 >
-> Small **NVIDIA Nemotron** models make hundreds of cheap judgements. A
-> bigger one reads the sources. The biggest one decides, twice. All of it
-> running on **Nebius Token Factory**.
+> Small **NVIDIA Nemotron** models make hundreds of cheap judgements, a
+> bigger one reads the sources, the biggest one decides. All on **Nebius
+> Token Factory**. That split is nine and a half times cheaper than
+> putting everything through the largest model — measured from logged
+> calls, not estimated.
 >
-> That split makes it nine and a half times cheaper than putting
-> everything through the largest model — and that is measured from logged
-> calls, not estimated. The whole project has cost me about twenty-five
-> cents.
+> The whole project has cost me about twenty-five cents.
 
 ### 4. It comes to you · 1:28–2:10 · **the one that matters**
 
-*[open the test notice page, Telegram visible]*
+*[start on the side panel. Make sure the viewer sees there is no dot.]*
 
 > But checking once is not the point. It re-checks every source behind my
 > plans every few days — official pages every three.
->
+
+*[click **See the watching work**, then open the notice]*
+
 > Here is a test page one of my plans depends on. I am going to play the
 > source. I will change the date and publish it, and I am not going to ask
 > it anything. Normally it would find this on its own the next morning;
 > here, publishing sets the check off straight away.
 
-*[change the date, publish, then stop talking for about two seconds]*
+*[change the date, publish, then go back to the panel and stop talking
+for about two seconds — let the dot appear on camera]*
 
-> There. It came to me.
->
+> There. That conversation has a dot on it now, and I never typed
+> anything. It came to me.
+
+*[open the plan]*
+
 > It says what it told me no longer holds, shows what the page says
 > instead, and timestamps the correction. That is an AI correcting itself,
 > on the record.
@@ -95,11 +100,11 @@ Nemotron** out loud. Not on a slide. Spoken. Both are in the script twice.
 ### 6. Close · 2:20–2:45 · *back to the landing page*
 
 > A month ago I had never built an app. Now it checks my plans against the
-> real world, and when the world moves, it tells me.
+> real world, and tells me when the world moves.
 >
-> Open source, MIT licensed, running on **NVIDIA Nemotron** through
-> **Nebius Token Factory**. The demo is linked below — go and change the
-> date yourself, and see whether it notices.
+> Open source, MIT, running on **NVIDIA Nemotron** through **Nebius Token
+> Factory**. The demo is linked below — go and change the date yourself,
+> and see whether it notices.
 
 ---
 
@@ -126,6 +131,9 @@ nothing and the other kind is a risk.
   interval — **3 days** for an official page, 2 for news, 7 for a forum.
   Separately, once a week it searches for pages that did not exist before.
   Do **not** say "it checks weekly"; that understates it.
+- **No Telegram in this cut.** The product does message your phone on a
+  personal instance, but the public demo has nobody to notify, so the
+  video shows the dot instead. Do not claim it texted you.
 - **The demo responds in seconds** because publishing a change triggers
   the check immediately. Say so. The page says the same thing, so a judge
   comparing the two will find them consistent.
@@ -147,8 +155,8 @@ nothing and the other kind is a risk.
   the finding already withdrawn.
 - **The dot clears the instant you open the thread.** Film the panel
   first, then open it.
-- **Do not open the thread while waiting** for the alert — that marks it
-  read.
+- **Do not open the thread while waiting** for the message — that marks it
+  read and the dot never appears on camera.
 - **Do not put a terminal with your `.env` on screen.**
 - Record the two-second pause in beat 4 rather than cutting it. The wait
   is the proof that you did not prompt it.
