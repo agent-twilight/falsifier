@@ -31,7 +31,7 @@ venv/
 # rescue a file from an excluded *directory*, so this excludes the
 # contents rather than the folder itself.
 data/*
-logs/
+logs/*
 *.db
 *.sqlite3
 
@@ -39,6 +39,10 @@ logs/
 # is built by scripts/build_demo_db.py and contains only mode='demo'
 # rows, which that script verifies before writing.
 !data/demo.db
+
+# The run log is the evidence that the watch ran unattended, and the
+# README points a judge at it. Run summaries only, no content.
+!logs/monitor.log
 
 # ---------------------------------------------------------------
 # OS and editor junk

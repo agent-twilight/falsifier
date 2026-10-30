@@ -286,12 +286,12 @@ meant to solve.
 - **Re-checking a known page cannot find news that appeared elsewhere.** That
   needs a fresh search, which costs credits, so it runs weekly rather than
   daily. Within a week, something new may exist that it has not seen.
-- **The unattended record is short and has gaps.** `logs/monitor.log`
-  shows runs on 6 days between 19 and 28 October, not every day:
-  the laptop it runs on was asleep or off for the rest. A scheduled task
-  plus a logon trigger cover what they can, but a machine that is off
-  cannot check anything. The log is the real record and it is in the repo;
-  nothing here claims weeks of continuous operation.
+- **The unattended record is short and has gaps.** `logs/monitor.log` is
+  committed, and it shows runs on six days between 19 and 28 October, not
+  every day: the laptop it runs on was asleep or off for the rest. A
+  scheduled task plus a logon trigger cover what they can, but a machine
+  that is off cannot check anything. Nothing here claims weeks of
+  continuous operation — open the log and count.
 
 ---
 
@@ -311,8 +311,15 @@ scripts/       setup check, demo database builder, Windows task scripts
 tests/         150 tests
 ```
 
-[DEPLOY.md](DEPLOY.md) covers putting the demo online.
-[FEEDBACK.md](FEEDBACK.md) is the running log of what broke.
-[STEPS.md](STEPS.md) is the build tracker.
+[FEEDBACK.md](FEEDBACK.md) is the running log of what broke while building
+on Token Factory, written as things happened rather than reconstructed
+afterwards.
+
+`logs/monitor.log` is the record of the watch running unattended. It is
+short, and it has gaps.
+
+Deploying it is a plain `Dockerfile` that reads `$PORT`, so it runs on
+Render, Fly, Cloud Run or any server. `render.yaml` declares the service;
+the two API keys are set in the host's dashboard and never committed.
 
 MIT licensed.
