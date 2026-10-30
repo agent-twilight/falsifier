@@ -56,3 +56,6 @@ desktop.ini
 # Draft answers for the submission form. Notes to self, not part of
 # the project.
 SUBMISSION.md
+
+# Session notes for the coding assistant, not part of the project.
+CLAUDE.md
